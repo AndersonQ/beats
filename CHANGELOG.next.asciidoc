@@ -41,8 +41,6 @@ https://github.com/elastic/beats/compare/v8.2.0\...main[Check the HEAD diff]
 - Support for multiline zookeeper logs {issue}2496[2496]
 - Add checks to ensure reloading of units if the configuration actually changed. {pull}34346[34346]
 
-
-
 *Auditbeat*
 
 
@@ -99,28 +97,7 @@ https://github.com/elastic/beats/compare/v8.2.0\...main[Check the HEAD diff]
 - Fix crash when processing forwarded logs missing a message. {issue}34705[34705] {pull}34865[34865]
 - Fix crash when loading azurewebstorage cursor with no partially processed data. {pull}35433[35433]
 - Fix crash when processing forwarded logs missing a message. {issue}34705[34705] {pull}34865[34865]
-
-*Heartbeat*
-
-
-*Heartbeat*
-
-
-*Heartbeat*
-
-
-*Auditbeat*
-
-
-*Filebeat*
-
 - Allow the `misp` fileset in the Filebeat `threatintel` module to ignore CIDR ranges for an IP field. {issue}29949[29949] {pull}34195[34195]
-
-*Auditbeat*
-
-
-*Filebeat*
-
 
 *Heartbeat*
 
