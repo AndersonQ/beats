@@ -76,11 +76,11 @@ func NewReplaceString(c *conf.C) (beat.Processor, error) {
 }
 
 func (f *replaceString) Run(event *beat.Event) (*beat.Event, error) {
-	var backup *beat.Event
-	// Creates a copy of the event to revert in case of failure
-	if f.config.FailOnError {
-		backup = event.Clone()
-	}
+	// var backup *beat.Event
+	// // Creates a copy of the event to revert in case of failure
+	// if f.config.FailOnError {
+	// 	backup = event.Clone()
+	// }
 
 	for _, field := range f.config.Fields {
 		err := f.replaceField(field.Field, field.Pattern, field.Replacement, event)
@@ -90,7 +90,7 @@ func (f *replaceString) Run(event *beat.Event) (*beat.Event, error) {
 				f.log.Debug(errMsg.Error())
 			}
 			if f.config.FailOnError {
-				event = backup
+				// event = backup
 				_, _ = event.PutValue("error.message", errMsg.Error())
 				return event, err
 			}

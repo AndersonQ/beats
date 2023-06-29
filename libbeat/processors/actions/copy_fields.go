@@ -70,10 +70,10 @@ func NewCopyFields(c *conf.C) (beat.Processor, error) {
 }
 
 func (f *copyFields) Run(event *beat.Event) (*beat.Event, error) {
-	var backup *beat.Event
-	if f.config.FailOnError {
-		backup = event.Clone()
-	}
+	// var backup *beat.Event
+	// if f.config.FailOnError {
+	// 	backup = event.Clone()
+	// }
 
 	for _, field := range f.config.Fields {
 		err := f.copyField(field.From, field.To, event)
@@ -83,7 +83,7 @@ func (f *copyFields) Run(event *beat.Event) (*beat.Event, error) {
 				f.logger.Debug(errMsg.Error())
 			}
 			if f.config.FailOnError {
-				event = backup
+				// event = backup
 				_, _ = event.PutValue("error.message", errMsg.Error())
 				return event, err
 			}

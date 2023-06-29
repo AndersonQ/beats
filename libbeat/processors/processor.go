@@ -163,17 +163,38 @@ func (procs *Processors) Close() error {
 // list then a nil event is returned.
 func (procs *Processors) Run(event *beat.Event) (*beat.Event, error) {
 	var err error
-	for _, p := range procs.List {
-		event, err = p.Run(event)
+	var lastRun int
+	var p beat.Processor
+
+	e := event.Clone()
+	for lastRun, p = range procs.List {
+		event, err = p.Run(e)
 		if err != nil {
-			return event, fmt.Errorf("failed applying processor %v: %w", p, err)
+			err = fmt.Errorf("failed applying processor %v: %w", p, err)
+			break
 		}
 		if event == nil {
 			// Drop.
 			return nil, nil
 		}
 	}
-	return event, nil
+
+	var err2 error
+	// Run all processors that succeeded
+	for i := 0; i < lastRun; i++ {
+		e, err2 = procs.List[i].Run(e)
+		if err2 != nil {
+			// For some reason a processor that succeeded, failed, return this
+			// error instead
+			return e, fmt.Errorf("failed re-applying processors %v: %w", p, err2)
+		}
+		if event == nil {
+			// Drop.
+			return nil, nil
+		}
+	}
+
+	return e, err
 }
 
 func (procs Processors) String() string {

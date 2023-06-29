@@ -74,10 +74,10 @@ func NewAppendProcessor(c *conf.C) (beat.Processor, error) {
 }
 
 func (f *appendProcessor) Run(event *beat.Event) (*beat.Event, error) {
-	var backup *beat.Event
-	if f.config.FailOnError {
-		backup = event.Clone()
-	}
+	// var backup *beat.Event
+	// if f.config.FailOnError {
+	// 	backup = event.Clone()
+	// }
 
 	err := f.appendValues(f.config.TargetField, f.config.Fields, f.config.Values, event)
 	if err != nil {
@@ -86,7 +86,7 @@ func (f *appendProcessor) Run(event *beat.Event) (*beat.Event, error) {
 			f.logger.Debug(errMsg.Error())
 		}
 		if f.config.FailOnError {
-			event = backup
+			// event = backup
 			if _, err := event.PutValue("error.message", errMsg.Error()); err != nil {
 				return nil, fmt.Errorf("failed to append fields in append processor: %w", err)
 			}
