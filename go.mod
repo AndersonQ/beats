@@ -138,7 +138,7 @@ require (
 	github.com/samuel/go-thrift v0.0.0-20140522043831-2187045faa54
 	github.com/sanathkr/yaml v1.0.1-0.20170819201035-0056894fa522 // indirect
 	github.com/shopspring/decimal v1.3.1 // indirect
-	github.com/spf13/cobra v1.3.0
+	github.com/spf13/cobra v1.7.0
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.8.2
 	github.com/tsg/go-daemon v0.0.0-20200207173439-e704b93fd89b
@@ -158,7 +158,7 @@ require (
 	golang.org/x/net v0.9.0
 	golang.org/x/oauth2 v0.7.0
 	golang.org/x/sync v0.1.0
-	golang.org/x/sys v0.7.0
+	golang.org/x/sys v0.9.0
 	golang.org/x/text v0.9.0
 	golang.org/x/time v0.3.0
 	golang.org/x/tools v0.6.0
@@ -292,7 +292,7 @@ require (
 	github.com/hashicorp/go-uuid v1.0.2 // indirect
 	github.com/hashicorp/go-version v1.2.0 // indirect
 	github.com/imdario/mergo v0.3.12 // indirect
-	github.com/inconshreveable/mousetrap v1.0.1 // indirect
+	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jcchavezs/porto v0.1.0 // indirect
 	github.com/jcmturner/aescts/v2 v2.0.0 // indirect
 	github.com/jcmturner/dnsutils/v2 v2.0.0 // indirect
@@ -343,7 +343,7 @@ require (
 	github.com/xdg-go/scram v1.0.2 // indirect
 	github.com/xdg-go/stringprep v1.0.2 // indirect
 	github.com/xdg/stringprep v1.0.3 // indirect
-	github.com/youmark/pkcs8 v0.0.0-20181117223130-1be2e3e5546d // indirect
+	github.com/youmark/pkcs8 v0.0.0-20201027041543-1326539a0a0a // indirect
 	github.com/yusufpapurcu/wmi v1.2.2 // indirect
 	github.com/zeebo/xxh3 v1.0.2 // indirect
 	go.elastic.co/fastjson v1.1.0 // indirect
@@ -394,3 +394,5 @@ replace (
 
 // Exclude this version because the version has an invalid checksum.
 exclude github.com/docker/distribution v2.8.0+incompatible
+
+replace github.com/elastic/elastic-agent-libs => github.com/AndersonQ/elastic-agent-libs v0.0.0-20230629135023-889167152ee7

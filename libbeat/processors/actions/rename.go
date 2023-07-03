@@ -74,6 +74,10 @@ func NewRenameFields(c *conf.C) (beat.Processor, error) {
 }
 
 func (f *renameFields) Run(event *beat.Event) (*beat.Event, error) {
+	// It'll do all necessary checks to ensure the whole operation will succeed,
+	// thus there is no need to copy the event as it'll only be changed once it's
+	// confirmed the change will succeed.
+
 	// var backup *beat.Event
 	// // Creates a copy of the event to revert in case of failure
 	// if f.config.FailOnError {
@@ -87,6 +91,7 @@ func (f *renameFields) Run(event *beat.Event) (*beat.Event, error) {
 			if publisher.LogWithTrace() {
 				f.logger.Debug(errMsg.Error())
 			}
+
 			if f.config.FailOnError {
 				// event = backup
 				_, _ = event.PutValue("error.message", errMsg.Error())
@@ -114,16 +119,26 @@ func (f *renameFields) renameField(from string, to string, event *beat.Event) er
 		return fmt.Errorf("could not fetch value for key: %s, Error: %w", from, err)
 	}
 
+	// Only perform changes if we know they'll succeed
+	if err = event.DryDelete(from); err != nil {
+		return fmt.Errorf("could not delete key: %s,  %w", from, err)
+	}
+	if err = event.DryPutValue(to, value); err != nil {
+		return fmt.Errorf("could not put value: %s: %v, %w", to, value, err)
+	}
+
+	// It is (should) be safe to proceed now.
+
 	// Deletion must happen first to support cases where a becomes a.b
 	err = event.Delete(from)
 	if err != nil {
 		return fmt.Errorf("could not delete key: %s,  %w", from, err)
 	}
-
 	_, err = event.PutValue(to, value)
 	if err != nil {
 		return fmt.Errorf("could not put value: %s: %v, %w", to, value, err)
 	}
+
 	return nil
 }
 

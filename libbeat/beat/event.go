@@ -163,17 +163,51 @@ func (e *Event) deepUpdate(d mapstr.M, overwrite bool) {
 	}
 }
 
-func (e *Event) setTimestamp(v interface{}) error {
+func (e *Event) toTime(v any) (time.Time, error) {
 	switch ts := v.(type) {
 	case time.Time:
-		e.Timestamp = ts
+		return ts, nil
 	case common.Time:
-		e.Timestamp = time.Time(ts)
-	default:
-		return errNoTimestamp
+		return time.Time(ts), nil
 	}
 
+	return time.Time{}, errNoTimestamp
+}
+
+func (e *Event) setTimestamp(v interface{}) error {
+	t, err := e.toTime(v)
+	if err != nil {
+		return err
+	}
+
+	e.Timestamp = t
 	return nil
+}
+
+func (e *Event) DryPutValue(key string, v interface{}) error {
+	if key == timestampFieldKey {
+		_, err := e.toTime(v)
+		return err
+	}
+
+	// TODO(Anderson): remove duplicated code from Put
+	if subKey, ok := metadataKey(key); ok {
+		if subKey == "" {
+			switch meta := v.(type) {
+			case mapstr.M:
+				e.Meta = meta
+			case map[string]interface{}:
+				e.Meta = meta
+			default:
+				return errNoMapStr
+			}
+		} else if e.Meta == nil {
+			e.Meta = mapstr.M{}
+		}
+		return e.Meta.DryPut(subKey)
+	}
+
+	return e.Fields.DryPut(key)
 }
 
 func (e *Event) PutValue(key string, v interface{}) (interface{}, error) {
@@ -197,6 +231,20 @@ func (e *Event) PutValue(key string, v interface{}) (interface{}, error) {
 	}
 
 	return e.Fields.Put(key, v)
+}
+
+func (e *Event) DryDelete(key string) error {
+	if subKey, ok := metadataKey(key); ok {
+		if subKey == "" {
+			e.Meta = nil
+			return nil
+		}
+		if e.Meta == nil {
+			return nil
+		}
+		return e.Meta.DryDelete(subKey)
+	}
+	return e.Fields.DryDelete(key)
 }
 
 func (e *Event) Delete(key string) error {

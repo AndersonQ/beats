@@ -110,6 +110,10 @@ func (f *replaceString) replaceField(field string, pattern *regexp.Regexp, repla
 		return fmt.Errorf("could not fetch value for key: %s, Error: %w", field, err)
 	}
 
+	if err = event.DryPutValue(field, currentValue); err != nil {
+		return fmt.Errorf("could not put value: %s: %v, %w", replacement, currentValue, err)
+	}
+
 	updatedString := pattern.ReplaceAllString(currentValue.(string), replacement)
 	_, err = event.PutValue(field, updatedString)
 	if err != nil {
