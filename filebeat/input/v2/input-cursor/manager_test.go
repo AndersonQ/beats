@@ -27,6 +27,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gofrs/uuid/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -37,6 +38,7 @@ import (
 	conf "github.com/elastic/elastic-agent-libs/config"
 	"github.com/elastic/elastic-agent-libs/logp"
 	"github.com/elastic/elastic-agent-libs/mapstr"
+	"github.com/elastic/elastic-agent-libs/monitoring"
 	"github.com/elastic/go-concert/unison"
 )
 
@@ -284,6 +286,52 @@ func TestManager_InputsRun(t *testing.T) {
 		}, clientCounters.BuildConnector())
 		require.Error(t, err)
 		require.Equal(t, 0, clientCounters.Active())
+	})
+
+	t.Run("sub contexts created with correct metrics registry", func(t *testing.T) {
+		defer resources.NewGoroutinesChecker().Check(t)
+
+		inputType := "inputType"
+		inputID := "input-id"
+		sourceName := "source-1"
+
+		testInput := &fakeTestInput{
+			OnRun: func(ctx input.Context, source Source, cursor Cursor, publisher Publisher) error {
+				assert.Equal(t, ctx.ID, inputID+"::"+sourceName)
+				assert.NotNil(t, ctx.MetricsRegistryCancel)
+				require.NotNil(t, ctx.MetricsRegistry)
+				snapshot := monitoring.CollectFlatSnapshot(ctx.MetricsRegistry, monitoring.Full, true)
+				assert.Equal(t, inputType, snapshot.Strings["input"])
+				assert.Equal(t, ctx.ID, snapshot.Strings["id"])
+				return nil
+			},
+		}
+
+		manager := simpleManagerWithConfigure(t, func(cfg *conf.C) ([]Source, Input, error) {
+			config := struct{ Sources []string }{}
+			err := cfg.Unpack(&config)
+			return sourceList(config.Sources...), testInput, err
+		})
+		inp, err := manager.Create(conf.MustNewConfigFrom(map[string]interface{}{
+			"sources": []string{sourceName},
+		}))
+		require.NoError(t, err, "failed to create input")
+
+		cancelCtx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		var clientCounters pubtest.ClientCounter
+		beatInfo := beat.Info{}
+		beatInfo.Monitoring.Namespace = monitoring.GetNamespace(
+			uuid.Must(uuid.NewV4()).String())
+		err = inp.Run(input.Context{
+			ID:          inputID,
+			Name:        inputType,
+			Agent:       beatInfo,
+			Logger:      manager.Logger,
+			Cancelation: cancelCtx,
+		}, clientCounters.BuildConnector())
+		require.NoError(t, err, "input Run failed")
 	})
 
 	t.Run("panic is captured", func(t *testing.T) {
