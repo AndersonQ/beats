@@ -112,7 +112,9 @@ func (inp *managedInput) Run(
 
 	// A new context and a new metrics registry will be created for each worker,
 	// therefore this metrics won't be used, so cancel it.
-	ctx.MetricsRegistryCancel()
+	if ctx.MetricsRegistryCancel != nil {
+		ctx.MetricsRegistryCancel()
+	}
 
 	var grp unison.MultiErrGroup
 	for _, source := range inp.sources {
