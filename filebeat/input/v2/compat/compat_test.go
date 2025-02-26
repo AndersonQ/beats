@@ -150,6 +150,80 @@ type: test
 		}))
 		assert.Error(t, err)
 	})
+
+	t.Run("creates id when absent", func(t *testing.T) {
+		log := logp.NewLogger("test")
+
+		beatInfo := beat.Info{}
+		beatInfo.Monitoring.Namespace = monitoring.GetNamespace(t.Name())
+		// setup
+		plugins := inputest.SinglePlugin("test", &inputest.MockInputManager{
+			OnConfigure: func(cfg *conf.C) (v2.Input, error) {
+				return &inputest.MockInput{}, nil
+			},
+		})
+		loader := inputest.MustNewTestLoader(t, plugins, "type", "test")
+		factory := RunnerFactory(log, beatInfo, loader.Loader)
+
+		inputID := "some-id"
+		inputCfg := fmt.Sprintf(`
+id: %s
+parsers:
+  - container: null
+paths:
+  - /some/path/log.log
+prospector:
+  scanner:
+    symlinks: true
+take_over: true
+type: test
+`, inputID)
+
+		inpRunner, err := factory.Create(nil, conf.MustNewConfigFrom(inputCfg))
+		require.NoError(t, err, "could not create runner")
+		got, ok := inpRunner.(*runner)
+		require.Truef(t, ok, "inpRunner should be a %T", &runner{})
+
+		assert.Equal(t, got.id, inputID, "runner id should be the config id")
+		assert.False(t, got.emptyInputID,
+			"config has an ID, thus 'emptyInputID' should be false")
+	})
+
+	t.Run("creates id when absent", func(t *testing.T) {
+		log := logp.NewLogger("test")
+
+		beatInfo := beat.Info{}
+		beatInfo.Monitoring.Namespace = monitoring.GetNamespace(t.Name())
+		// setup
+		plugins := inputest.SinglePlugin("test", &inputest.MockInputManager{
+			OnConfigure: func(cfg *conf.C) (v2.Input, error) {
+				return &inputest.MockInput{}, nil
+			},
+		})
+		loader := inputest.MustNewTestLoader(t, plugins, "type", "test")
+		factory := RunnerFactory(log, beatInfo, loader.Loader)
+
+		inputCfg := `
+parsers:
+  - container: null
+paths:
+  - /some/path/log.log
+prospector:
+  scanner:
+    symlinks: true
+take_over: true
+type: test
+`
+
+		inpRunner, err := factory.Create(nil, conf.MustNewConfigFrom(inputCfg))
+		require.NoError(t, err, "could not create runner")
+		got, ok := inpRunner.(*runner)
+		require.Truef(t, ok, "inpRunner should be a %T", &runner{})
+
+		assert.NotEmpty(t, got.id)
+		assert.True(t, got.emptyInputID,
+			"config did not have an ID, thus 'emptyInputID' should be true")
+	})
 }
 
 func TestRunnerFactory_CreateAndRun(t *testing.T) {
