@@ -53,7 +53,9 @@ type factory struct {
 // On stop the runner triggers the shutdown signal and waits until the input
 // has returned.
 type runner struct {
-	id             string
+	id string
+	// emptyInputID is true when the config does not include an ID and therefore
+	// the runner uses a hash from the config as ID.
 	emptyInputID   bool
 	log            *logp.Logger
 	agent          *beat.Info
@@ -137,15 +139,6 @@ func (r *runner) Start() {
 		defer r.wg.Done()
 		log.Infof("Input '%s' starting", name)
 
-		// Ideally all inputs would use the registry from the beat.Info for its
-		// metrics. However, it isn't the case for most inputs. For compatibility
-		// beat.Info.Monitoring.Namespace is the global 'dataset' namespace for
-		// the standard beat. Only when running as OTel receiver it's different.
-		// The http monitoring will check both namespaces for input metrics.
-		// Therefore, using either namespace won't affect how the metrics are
-		// published.
-		// As the runner always have a non-empty ID, we need to check if the
-		// config had ot not an ID to pass the correct value to inputmon.NewInputRegistry
 		inputID := r.id
 		if r.emptyInputID {
 			inputID = ""

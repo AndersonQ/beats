@@ -30,17 +30,15 @@ import (
 )
 
 // NewInputRegistry returns the *monitoring.Registry for metrics related to
-// an input instance, identified by ID.  If a registry with the given ID
-// already exists, it is returned. Otherwise, a new registry is created.
+// an input instance, identified by ID. If a registry with the given ID
+// already exists, it is returned. Otherwise, a new registry is created. //
+// If a parent registry is provided, it will be used instead of the default
+// 'dataset' monitoring namespace.
+// If parent is nil, inputType and id must be non-empty. Otherwise the metrics
+// will not be published.
 //
 // The returned cancel function *must* be called when the input stops to
 // unregister the metrics and prevent resource leaks.
-//
-// If a parent registry is provided, it will be used instead of the default
-// 'dataset' monitoring namespace.
-//
-// If parent is nil, inputType and id must be non-empty. Otherwise the metrics
-// will not be published.
 //
 // This function might panic.
 func NewInputRegistry(inputType, id string, parent *monitoring.Registry) (reg *monitoring.Registry, cancel func()) {

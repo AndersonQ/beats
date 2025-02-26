@@ -79,7 +79,8 @@ type Context struct {
 
 	// The input ID.
 	ID string
-	// Name is the input name
+	// Name is the input name. It's primary used when creating the metric
+	// registry for this input.
 	Name string
 
 	// The input ID without name. Some inputs append sourcename, we need the id to be untouched
@@ -90,8 +91,19 @@ type Context struct {
 	Agent beat.Info
 
 	// MetricsRegistry to collect metrics for this input.
+	// The context now provides a metrics registry for input metrics,
+	// sourced from beat.Info.Monitoring.Namespace.
+	// For compatibility, beats are configured with the global 'dataset'
+	// namespace in beat.Info.Monitoring.Namespace.
+	// When running as an OTel receiver, each beat.Beat instance has a unique
+	// metrics namespace.
+	// Additionally, inputmon has been updated to consider both the global
+	// 'dataset' namespace and beat.Info.Monitoring.Namespace when retrieving
+	// metrics.
+	// Consequently, inputs are not required to immediately adopt the new
+	// registry for their metrics.
 	MetricsRegistry *monitoring.Registry
-	// MetricsRegistryCancel unregisters Registry and release the associated resources.
+	// MetricsRegistryCancel unregisters MetricsRegistry.
 	MetricsRegistryCancel func()
 
 	// Cancelation is used by Beats to signal the input to shutdown.
