@@ -23,6 +23,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+	"sync"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/require"
+
 	loginp "github.com/elastic/beats/v7/filebeat/input/filestream/internal/input-logfile"
 	v2 "github.com/elastic/beats/v7/filebeat/input/v2"
 	"github.com/elastic/beats/v7/libbeat/beat"
@@ -35,13 +44,6 @@ import (
 	"github.com/elastic/elastic-agent-libs/logp"
 	"github.com/elastic/elastic-agent-libs/monitoring"
 	"github.com/elastic/go-concert/unison"
-	"github.com/stretchr/testify/require"
-	"os"
-	"path/filepath"
-	"strings"
-	"sync"
-	"testing"
-	"time"
 )
 
 type inputTestingEnvironment struct {
