@@ -27,9 +27,11 @@ import (
 	v2 "github.com/elastic/beats/v7/filebeat/input/v2"
 	inputcursor "github.com/elastic/beats/v7/filebeat/input/v2/input-cursor"
 	"github.com/elastic/beats/v7/libbeat/beat"
+	"github.com/elastic/beats/v7/libbeat/monitoring/inputmon"
 	conf "github.com/elastic/elastic-agent-libs/config"
 	"github.com/elastic/elastic-agent-libs/logp"
 	"github.com/elastic/elastic-agent-libs/mapstr"
+	"github.com/elastic/elastic-agent-libs/monitoring"
 )
 
 var runRemote = flag.Bool("run_remote", false, "run tests using remote endpoints")
@@ -1921,11 +1923,18 @@ func TestInput(t *testing.T) {
 			defer cancel()
 
 			id := "test_id:" + test.name
+			reg, cancel := inputmon.NewInputRegistry(
+				input{}.Name(),
+				id,
+				monitoring.GetNamespace("dataset").
+					GetRegistry().NewRegistry(id))
 			v2Ctx := v2.Context{
-				Logger:        logp.NewLogger("cel_test"),
-				ID:            id,
-				IDWithoutName: id,
-				Cancelation:   ctx,
+				MetricsRegistry:       reg,
+				MetricsRegistryCancel: cancel,
+				Logger:                logp.NewLogger("cel_test"),
+				ID:                    id,
+				IDWithoutName:         id,
+				Cancelation:           ctx,
 			}
 			var client publisher
 			client.done = func() {
@@ -1977,7 +1986,8 @@ func TestInput(t *testing.T) {
 				t.Errorf("unexpected number of cursors events: got:%d want at least:%d", len(client.cursors), len(test.wantCursor))
 				test.wantCursor = test.wantCursor[:len(client.published)]
 			}
-			client.published = client.published[:len(test.want)]
+			// client.published = client.published[:len(test.want)]
+			client.cursors = client.cursors[:len(test.wantCursor)]
 			for i, got := range client.cursors {
 				if !reflect.DeepEqual(mapstr.M(got), mapstr.M(test.wantCursor[i])) {
 					t.Errorf("unexpected cursor for event %d: got:- want:+\n%s", i, cmp.Diff(got, test.wantCursor[i]))
