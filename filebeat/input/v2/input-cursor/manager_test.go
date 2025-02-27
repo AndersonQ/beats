@@ -280,7 +280,11 @@ func TestManager_InputsRun(t *testing.T) {
 		defer cancel()
 
 		var clientCounters pubtest.ClientCounter
+		beatInfo := beat.Info{}
+		beatInfo.Monitoring.Namespace =
+			monitoring.GetNamespace(uuid.Must(uuid.NewV4()).String())
 		err = inp.Run(input.Context{
+			Agent:       beatInfo,
 			Logger:      manager.Logger,
 			Cancelation: cancelCtx,
 		}, clientCounters.BuildConnector())
@@ -350,7 +354,11 @@ func TestManager_InputsRun(t *testing.T) {
 		defer cancel()
 
 		var clientCounters pubtest.ClientCounter
+		beatInfo := beat.Info{}
+		beatInfo.Monitoring.Namespace =
+			monitoring.GetNamespace(uuid.Must(uuid.NewV4()).String())
 		err = inp.Run(input.Context{
+			Agent:       beatInfo,
 			Logger:      manager.Logger,
 			Cancelation: cancelCtx,
 		}, clientCounters.BuildConnector())
@@ -379,7 +387,11 @@ func TestManager_InputsRun(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
+			beatInfo := beat.Info{}
+			beatInfo.Monitoring.Namespace =
+				monitoring.GetNamespace(uuid.Must(uuid.NewV4()).String())
 			err = inp.Run(input.Context{
+				Agent:       beatInfo,
 				Logger:      manager.Logger,
 				Cancelation: cancelCtx,
 			}, clientCounters.BuildConnector())
@@ -393,6 +405,9 @@ func TestManager_InputsRun(t *testing.T) {
 
 	t.Run("continue sending from last known position", func(t *testing.T) {
 		log := logp.NewLogger("test")
+		beatInfo := beat.Info{}
+		beatInfo.Monitoring.Namespace =
+			monitoring.GetNamespace(uuid.Must(uuid.NewV4()).String())
 
 		type runConfig struct{ Max int }
 
@@ -438,6 +453,7 @@ func TestManager_InputsRun(t *testing.T) {
 		inp, err := manager.Create(conf.MustNewConfigFrom(runConfig{Max: 3}))
 		require.NoError(t, err)
 		require.NoError(t, inp.Run(input.Context{
+			Agent:       beatInfo,
 			Logger:      log,
 			Cancelation: context.Background(),
 		}, pipeline))
@@ -446,6 +462,7 @@ func TestManager_InputsRun(t *testing.T) {
 		inp, err = manager.Create(conf.MustNewConfigFrom(runConfig{Max: 3}))
 		require.NoError(t, err)
 		_ = inp.Run(input.Context{
+			Agent:       beatInfo,
 			Logger:      log,
 			Cancelation: context.Background(),
 		}, pipeline)
@@ -499,11 +516,15 @@ func TestManager_InputsRun(t *testing.T) {
 		}
 
 		// start the input
+		beatInfo := beat.Info{}
+		beatInfo.Monitoring.Namespace =
+			monitoring.GetNamespace(uuid.Must(uuid.NewV4()).String())
 		var wg sync.WaitGroup
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			err = inp.Run(input.Context{
+				Agent:       beatInfo,
 				Logger:      manager.Logger,
 				Cancelation: cancelCtx,
 			}, pipeline)
