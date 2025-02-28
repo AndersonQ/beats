@@ -21,6 +21,7 @@ import (
 	"github.com/rcrowley/go-metrics"
 
 	v2 "github.com/elastic/beats/v7/filebeat/input/v2"
+	"github.com/elastic/beats/v7/libbeat/monitoring/inputmon"
 	"github.com/elastic/elastic-agent-libs/monitoring"
 	"github.com/elastic/elastic-agent-libs/monitoring/adapter"
 )
@@ -64,16 +65,18 @@ func NewMetrics(ctx v2.Context) *Metrics {
 		harvesterMetrics = monitoring.Default.NewRegistry("filebeat.harvester")
 	}
 
+	reg, unreg := inputmon.NewInputRegistry(
+		"filestream", ctx.ID, ctx.Agent.Monitoring.Namespace.GetRegistry())
 	m := Metrics{
-		unregister:        ctx.MetricsRegistryCancel,
-		FilesOpened:       monitoring.NewUint(ctx.MetricsRegistry, "files_opened_total"),
-		FilesClosed:       monitoring.NewUint(ctx.MetricsRegistry, "files_closed_total"),
-		FilesActive:       monitoring.NewUint(ctx.MetricsRegistry, "files_active"),
-		MessagesRead:      monitoring.NewUint(ctx.MetricsRegistry, "messages_read_total"),
-		MessagesTruncated: monitoring.NewUint(ctx.MetricsRegistry, "messages_truncated_total"),
-		BytesProcessed:    monitoring.NewUint(ctx.MetricsRegistry, "bytes_processed_total"),
-		EventsProcessed:   monitoring.NewUint(ctx.MetricsRegistry, "events_processed_total"),
-		ProcessingErrors:  monitoring.NewUint(ctx.MetricsRegistry, "processing_errors_total"),
+		unregister:        unreg,
+		FilesOpened:       monitoring.NewUint(reg, "files_opened_total"),
+		FilesClosed:       monitoring.NewUint(reg, "files_closed_total"),
+		FilesActive:       monitoring.NewUint(reg, "files_active"),
+		MessagesRead:      monitoring.NewUint(reg, "messages_read_total"),
+		MessagesTruncated: monitoring.NewUint(reg, "messages_truncated_total"),
+		BytesProcessed:    monitoring.NewUint(reg, "bytes_processed_total"),
+		EventsProcessed:   monitoring.NewUint(reg, "events_processed_total"),
+		ProcessingErrors:  monitoring.NewUint(reg, "processing_errors_total"),
 		ProcessingTime:    metrics.NewUniformSample(1024),
 
 		HarvesterStarted:   monitoring.NewInt(harvesterMetrics, "started"),
@@ -81,7 +84,7 @@ func NewMetrics(ctx v2.Context) *Metrics {
 		HarvesterRunning:   monitoring.NewInt(harvesterMetrics, "running"),
 		HarvesterOpenFiles: monitoring.NewInt(harvesterMetrics, "open_files"),
 	}
-	_ = adapter.NewGoMetrics(ctx.MetricsRegistry, "processing_time", adapter.Accept).
+	_ = adapter.NewGoMetrics(reg, "processing_time", adapter.Accept).
 		Register("histogram", metrics.NewHistogram(m.ProcessingTime))
 
 	return &m

@@ -38,7 +38,6 @@ import (
 	"github.com/elastic/beats/v7/libbeat/common/acker"
 	"github.com/elastic/beats/v7/libbeat/common/file"
 	"github.com/elastic/beats/v7/libbeat/common/transform/typeconv"
-	"github.com/elastic/beats/v7/libbeat/monitoring/inputmon"
 	"github.com/elastic/beats/v7/libbeat/statestore"
 	"github.com/elastic/beats/v7/libbeat/statestore/storetest"
 	conf "github.com/elastic/elastic-agent-libs/config"
@@ -130,15 +129,16 @@ func (e *inputTestingEnvironment) startInput(ctx context.Context, id string, inp
 	go func(wg *sync.WaitGroup, grp *unison.TaskGroup) {
 		defer wg.Done()
 		defer func() { _ = grp.Stop() }()
-		reg, _ := inputmon.NewInputRegistry(
-			"filestream", id, monitoring.GetNamespace("dataset").
-				GetRegistry())
 		inputCtx := v2.Context{
-			MetricsRegistry:       reg,
-			MetricsRegistryCancel: func() {},
-			Logger:                logp.L(),
-			Cancelation:           ctx,
-			ID:                    id}
+			MetricsRegistry: monitoring.GetNamespace("dataset").
+				GetRegistry().NewRegistry(id),
+			MetricsRegistryCancel: func() {
+				monitoring.GetNamespace("dataset").
+					GetRegistry().Remove(id)
+			},
+			Logger:      logp.L(),
+			Cancelation: ctx,
+			ID:          id}
 		_ = inp.Run(inputCtx, e.pipeline)
 	}(&e.wg, &e.grp)
 }

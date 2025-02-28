@@ -143,19 +143,21 @@ func (r *runner) Start() {
 		if r.emptyInputID {
 			inputID = ""
 		}
-		reg, cancel := inputmon.NewInputRegistry(
-			name, inputID, r.agent.Monitoring.Namespace.GetRegistry())
+		reg := r.agent.Monitoring.Namespace.GetRegistry().
+			NewRegistry(inputmon.SanitizeID(inputID))
 		err := r.input.Run(
 			v2.Context{
-				ID:                    r.id,
-				IDWithoutName:         r.id,
-				Name:                  name,
-				Agent:                 *r.agent,
-				MetricsRegistry:       reg,
-				MetricsRegistryCancel: cancel,
-				Logger:                log,
-				Cancelation:           r.sig,
-				StatusReporter:        r.statusReporter,
+				ID:              r.id,
+				IDWithoutName:   r.id,
+				Agent:           *r.agent,
+				MetricsRegistry: reg,
+				MetricsRegistryCancel: func() {
+					r.agent.Monitoring.Namespace.GetRegistry().
+						Remove(inputmon.SanitizeID(inputID))
+				},
+				Logger:         log,
+				Cancelation:    r.sig,
+				StatusReporter: r.statusReporter,
 			},
 			r.connector,
 		)

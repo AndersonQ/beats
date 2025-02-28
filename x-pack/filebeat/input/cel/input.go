@@ -44,6 +44,7 @@ import (
 	"github.com/elastic/beats/v7/libbeat/beat"
 	"github.com/elastic/beats/v7/libbeat/feature"
 	"github.com/elastic/beats/v7/libbeat/management/status"
+	"github.com/elastic/beats/v7/libbeat/monitoring/inputmon"
 	"github.com/elastic/beats/v7/libbeat/version"
 	"github.com/elastic/beats/v7/x-pack/filebeat/input/internal/httplog"
 	"github.com/elastic/beats/v7/x-pack/filebeat/input/internal/httpmon"
@@ -137,7 +138,7 @@ func (i input) run(env v2.Context, src *source, cursor map[string]interface{}, p
 	cfg := src.cfg
 	log := env.Logger.With("input_url", cfg.Resource.URL)
 
-	metrics := addInputMetrics(env.MetricsRegistry, env.MetricsRegistryCancel)
+	metrics, reg := addInputMetrics(env)
 	defer metrics.Close()
 
 	ctx := ctxtool.FromCanceller(env.Cancelation)
@@ -147,7 +148,7 @@ func (i input) run(env v2.Context, src *source, cursor map[string]interface{}, p
 		cfg.Resource.Tracer.Filename = strings.ReplaceAll(cfg.Resource.Tracer.Filename, "*", id)
 	}
 
-	client, trace, err := newClient(ctx, cfg, log, env.MetricsRegistry)
+	client, trace, err := newClient(ctx, cfg, log, reg)
 	if err != nil {
 		return err
 	}
@@ -1255,7 +1256,9 @@ type inputMetrics struct {
 	batchProcessingTime metrics.Sample     // histogram of the elapsed successful batch processing times in nanoseconds (time of receipt to time of ACK for non-empty batches).
 }
 
-func addInputMetrics(reg *monitoring.Registry, unreg func()) *inputMetrics {
+func addInputMetrics(ctx v2.Context) (*inputMetrics, *monitoring.Registry) {
+	reg, unreg := inputmon.NewInputRegistry(inputName, ctx.ID,
+		ctx.Agent.Monitoring.Namespace.GetRegistry())
 	out := &inputMetrics{
 		unregister:          unreg,
 		resource:            monitoring.NewString(reg, "resource"),
@@ -1272,7 +1275,7 @@ func addInputMetrics(reg *monitoring.Registry, unreg func()) *inputMetrics {
 	_ = adapter.NewGoMetrics(reg, "batch_processing_time", adapter.Accept).
 		Register("histogram", metrics.NewHistogram(out.batchProcessingTime))
 
-	return out
+	return out, reg
 }
 
 func (m *inputMetrics) Close() {

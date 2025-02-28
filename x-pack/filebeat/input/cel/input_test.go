@@ -27,7 +27,6 @@ import (
 	v2 "github.com/elastic/beats/v7/filebeat/input/v2"
 	inputcursor "github.com/elastic/beats/v7/filebeat/input/v2/input-cursor"
 	"github.com/elastic/beats/v7/libbeat/beat"
-	"github.com/elastic/beats/v7/libbeat/monitoring/inputmon"
 	conf "github.com/elastic/elastic-agent-libs/config"
 	"github.com/elastic/elastic-agent-libs/logp"
 	"github.com/elastic/elastic-agent-libs/mapstr"
@@ -1923,18 +1922,18 @@ func TestInput(t *testing.T) {
 			defer cancel()
 
 			id := "test_id:" + test.name
-			reg, cancelReg := inputmon.NewInputRegistry(
-				input{}.Name(),
-				id,
-				monitoring.GetNamespace("dataset").GetRegistry().NewRegistry(id),
-			)
+			reg := monitoring.GetNamespace("dataset").GetRegistry().
+				NewRegistry(id)
 			v2Ctx := v2.Context{
-				MetricsRegistry:       reg,
-				MetricsRegistryCancel: cancelReg,
-				Logger:                logp.NewLogger("cel_test"),
-				ID:                    id,
-				IDWithoutName:         id,
-				Cancelation:           ctx,
+				MetricsRegistry: reg,
+				MetricsRegistryCancel: func() {
+					monitoring.GetNamespace("dataset").GetRegistry().
+						Remove(id)
+				},
+				Logger:        logp.NewLogger("cel_test"),
+				ID:            id,
+				IDWithoutName: id,
+				Cancelation:   ctx,
 			}
 			var client publisher
 			client.done = func() {

@@ -48,7 +48,8 @@ type Client interface {
 type ClientConfig struct {
 	// InputMetricsRegistry is the metrics registry used to aggregate pipeline metrics
 	// per input.
-	InputMetricsRegistry *monitoring.Registry
+	InputMetricsRegistry       *monitoring.Registry
+	InputMetricsRegistryCancel func()
 
 	PublishMode PublishMode
 

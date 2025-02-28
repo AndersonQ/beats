@@ -34,14 +34,14 @@ import (
 // already exists, it is returned. Otherwise, a new registry is created. //
 // If a parent registry is provided, it will be used instead of the default
 // 'dataset' monitoring namespace.
-// If parent is nil, inputType and id must be non-empty. Otherwise the metrics
+// If parent is nil, inputType and id must be non-empty. Otherwise, the metrics
 // will not be published.
 //
 // The returned cancel function *must* be called when the input stops to
 // unregister the metrics and prevent resource leaks.
 //
 // This function might panic.
-func NewInputRegistry(inputType, id string, parent *monitoring.Registry) (reg *monitoring.Registry, cancel func()) {
+func NewInputRegistry(inputType, id string, optionalParent *monitoring.Registry) (reg *monitoring.Registry, cancel func()) {
 	defer func() {
 		if r := recover(); r != nil {
 			panic(fmt.Errorf("inoutmon.NewInputRegistry panic: %+v", r))
@@ -49,7 +49,7 @@ func NewInputRegistry(inputType, id string, parent *monitoring.Registry) (reg *m
 	}()
 
 	// Use the default registry unless one was provided (this would be for testing).
-	parentRegistry := parent
+	parentRegistry := optionalParent
 	if parentRegistry == nil {
 		parentRegistry = globalRegistry()
 	}
@@ -63,7 +63,7 @@ func NewInputRegistry(inputType, id string, parent *monitoring.Registry) (reg *m
 
 	// Sanitize dots from the id because they created nested objects within
 	// the monitoring registry, and we want a consistent flat level of nesting
-	key := sanitizeID(id)
+	key := SanitizeID(id)
 
 	// Log the registration to ease tracking down duplicate ID registrations.
 	// Logged at INFO rather than DEBUG since it is not in a hot path and having
@@ -78,7 +78,7 @@ func NewInputRegistry(inputType, id string, parent *monitoring.Registry) (reg *m
 	if reg == nil {
 		reg = parentRegistry.NewRegistry(key)
 	}
-	SetInputType(reg, inputType)
+	monitoring.NewString(reg, "input").Set(inputType)
 	monitoring.NewString(reg, "id").Set(id)
 
 	return reg, func() {
@@ -87,11 +87,7 @@ func NewInputRegistry(inputType, id string, parent *monitoring.Registry) (reg *m
 	}
 }
 
-func SetInputType(r *monitoring.Registry, inputType string) {
-	monitoring.NewString(r, "input").Set(inputType)
-}
-
-func sanitizeID(id string) string {
+func SanitizeID(id string) string {
 	return strings.ReplaceAll(id, ".", "_")
 }
 

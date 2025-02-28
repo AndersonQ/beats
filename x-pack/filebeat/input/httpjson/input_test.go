@@ -19,7 +19,6 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	v2 "github.com/elastic/beats/v7/filebeat/input/v2"
-	"github.com/elastic/beats/v7/libbeat/monitoring/inputmon"
 	beattest "github.com/elastic/beats/v7/libbeat/publisher/testing"
 	conf "github.com/elastic/elastic-agent-libs/config"
 	"github.com/elastic/elastic-agent-libs/logp"
@@ -1660,21 +1659,22 @@ func newChainPaginationTestServer(
 
 func newV2Context(id string) (v2.Context, func()) {
 	ctx, cancel := context.WithCancel(context.Background())
-	reg, cancelReg := inputmon.NewInputRegistry(
-		inputName,
-		id,
-		monitoring.GetNamespace("dataset").GetRegistry(),
-	)
+	reg := monitoring.GetNamespace("dataset").
+		GetRegistry().NewRegistry(id)
+	unreg := func() {
+		monitoring.GetNamespace("dataset").
+			GetRegistry().Remove(id)
+	}
 	return v2.Context{
 			MetricsRegistry:       reg,
-			MetricsRegistryCancel: cancelReg,
+			MetricsRegistryCancel: unreg,
 			Logger:                logp.NewLogger("httpjson_test"),
 			ID:                    id,
 			IDWithoutName:         id,
 			Cancelation:           ctx,
 		}, func() {
 			cancel()
-			cancelReg()
+			unreg()
 		}
 }
 

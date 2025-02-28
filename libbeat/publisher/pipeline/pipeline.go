@@ -209,10 +209,11 @@ func (p *Pipeline) ConnectWith(cfg beat.ClientConfig) (beat.Client, error) {
 		return nil, err
 	}
 
-	reg := cfg.InputMetricsRegistry
+	reg, regCancel := cfg.InputMetricsRegistry, cfg.InputMetricsRegistryCancel
 	if reg == nil {
 		// No registry, then create a 'discard' registry.
 		reg = monitoring.NewRegistry()
+		regCancel = func() {}
 	}
 
 	client := &client{
@@ -223,7 +224,8 @@ func (p *Pipeline) ConnectWith(cfg beat.ClientConfig) (beat.Client, error) {
 		canDrop:        canDrop,
 		observer:       p.observer,
 
-		inputMetricsRegistry: reg,
+		inputMetricsRegistry:       reg,
+		inputMetricsRegistryCancel: regCancel,
 		inputMetrics: inputMetrics{
 			inputEventsTotal:     monitoring.NewUint(reg, "events_pipeline_total"),
 			inputEventsFailed:    monitoring.NewUint(reg, "events_pipeline_failed_total"),

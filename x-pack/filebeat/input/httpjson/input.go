@@ -168,9 +168,9 @@ func test(url *url.URL) error {
 }
 
 func runWithMetrics(ctx v2.Context, cfg config, pub inputcursor.Publisher, crsr *inputcursor.Cursor) error {
-	inputmon.SetInputType(ctx.MetricsRegistry, "httpjson")
-	defer ctx.MetricsRegistryCancel()
-	return run(ctx, cfg, pub, crsr, ctx.MetricsRegistry)
+	reg, unreg := inputmon.NewInputRegistry("httpjson", ctx.ID, nil)
+	defer unreg()
+	return run(ctx, cfg, pub, crsr, reg)
 }
 
 func run(ctx v2.Context, cfg config, pub inputcursor.Publisher, crsr *inputcursor.Cursor, reg *monitoring.Registry) error {

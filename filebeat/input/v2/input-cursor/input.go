@@ -127,12 +127,13 @@ func (inp *managedInput) Run(
 			inpCtx.ID = ctx.ID + "::" + source.Name()
 			inpCtx.Logger = ctx.Logger.With("input_source", source.Name())
 
-			reg, regCancel := inputmon.NewInputRegistry(
-				inpCtx.Name,
-				inpCtx.ID,
-				inpCtx.Agent.Monitoring.Namespace.GetRegistry())
+			reg := inpCtx.Agent.Monitoring.Namespace.GetRegistry().
+				NewRegistry(inputmon.SanitizeID(inpCtx.ID))
 			inpCtx.MetricsRegistry = reg
-			inpCtx.MetricsRegistryCancel = regCancel
+			inpCtx.MetricsRegistryCancel = func() {
+				inpCtx.Agent.Monitoring.Namespace.GetRegistry().
+					Remove(inputmon.SanitizeID(inpCtx.ID))
+			}
 
 			if err = inp.runSource(inpCtx, inp.manager.store, source, pipeline); err != nil {
 				cancel()
@@ -161,8 +162,9 @@ func (inp *managedInput) runSource(
 	}()
 
 	client, err := pipeline.ConnectWith(beat.ClientConfig{
-		InputMetricsRegistry: ctx.MetricsRegistry,
-		EventListener:        newInputACKHandler(ctx.Logger),
+		InputMetricsRegistry:       ctx.MetricsRegistry,
+		InputMetricsRegistryCancel: ctx.MetricsRegistryCancel,
+		EventListener:              newInputACKHandler(ctx.Logger),
 	})
 	if err != nil {
 		return err

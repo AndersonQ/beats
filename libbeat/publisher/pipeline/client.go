@@ -45,7 +45,9 @@ type client struct {
 	isOpen atomic.Bool // set to false during shutdown, such that no new events will be accepted anymore.
 
 	// inputMetricsRegistry is the registry used for the per-input metrics.
-	inputMetricsRegistry *monitoring.Registry
+	inputMetricsRegistryCancel func()
+	inputMetricsRegistry       *monitoring.Registry
+
 	// inputMetrics are the actual monitoring variables for the per-input
 	// metrics.
 	inputMetrics inputMetrics
@@ -160,6 +162,10 @@ func (c *client) Close() error {
 				c.logger.Errorf("client: error closing processors: %v", err)
 			}
 			c.logger.Debug("client: done closing processors")
+		}
+		if c.inputMetricsRegistryCancel != nil {
+			c.logger.Debug("client: closing input metrics registry")
+			c.inputMetricsRegistryCancel()
 		}
 	}
 	return nil

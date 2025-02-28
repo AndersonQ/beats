@@ -342,7 +342,9 @@ func TestMonitoring(t *testing.T) {
 
 		clientCfg := beat.ClientConfig{
 			InputMetricsRegistry: beatInfo.Monitoring.Namespace.
-				GetRegistry().NewRegistry(inputID)}
+				GetRegistry().NewRegistry(inputID),
+			InputMetricsRegistryCancel: func() {},
+		}
 		testInputMetrics(t, beatInfo, clientCfg, inputID)
 	})
 
