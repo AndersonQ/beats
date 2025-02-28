@@ -292,7 +292,7 @@ func TestManager_InputsRun(t *testing.T) {
 		require.Equal(t, 0, clientCounters.Active())
 	})
 
-	t.Run("sub contexts created with correct metrics registry", func(t *testing.T) {
+	t.Run("sub contexts created with new metrics registry", func(t *testing.T) {
 		defer resources.NewGoroutinesChecker().Check(t)
 
 		inputType := "inputType"

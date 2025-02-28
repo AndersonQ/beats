@@ -151,7 +151,7 @@ type: test
 		assert.Error(t, err)
 	})
 
-	t.Run("creates id when absent", func(t *testing.T) {
+	t.Run("uses id from config", func(t *testing.T) {
 		log := logp.NewLogger("test")
 
 		beatInfo := beat.Info{}
@@ -189,7 +189,7 @@ type: test
 			"config has an ID, thus 'emptyInputID' should be false")
 	})
 
-	t.Run("creates id when absent", func(t *testing.T) {
+	t.Run("creates id when absent and sets emptyInputID to true", func(t *testing.T) {
 		log := logp.NewLogger("test")
 
 		beatInfo := beat.Info{}
