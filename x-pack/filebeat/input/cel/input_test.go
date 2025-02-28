@@ -1926,8 +1926,8 @@ func TestInput(t *testing.T) {
 			reg, cancel := inputmon.NewInputRegistry(
 				input{}.Name(),
 				id,
-				monitoring.GetNamespace("dataset").
-					GetRegistry().NewRegistry(id))
+				monitoring.GetNamespace("dataset").GetRegistry().NewRegistry(id),
+			)
 			v2Ctx := v2.Context{
 				MetricsRegistry:       reg,
 				MetricsRegistryCancel: cancel,
@@ -1986,7 +1986,6 @@ func TestInput(t *testing.T) {
 				t.Errorf("unexpected number of cursors events: got:%d want at least:%d", len(client.cursors), len(test.wantCursor))
 				test.wantCursor = test.wantCursor[:len(client.published)]
 			}
-			// client.published = client.published[:len(test.want)]
 			client.cursors = client.cursors[:len(test.wantCursor)]
 			for i, got := range client.cursors {
 				if !reflect.DeepEqual(mapstr.M(got), mapstr.M(test.wantCursor[i])) {

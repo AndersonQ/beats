@@ -137,7 +137,7 @@ func (i input) run(env v2.Context, src *source, cursor map[string]interface{}, p
 	cfg := src.cfg
 	log := env.Logger.With("input_url", cfg.Resource.URL)
 
-	metrics, reg := newInputMetrics(env)
+	metrics := addInputMetrics(env.MetricsRegistry, env.MetricsRegistryCancel)
 	defer metrics.Close()
 
 	ctx := ctxtool.FromCanceller(env.Cancelation)
@@ -147,7 +147,7 @@ func (i input) run(env v2.Context, src *source, cursor map[string]interface{}, p
 		cfg.Resource.Tracer.Filename = strings.ReplaceAll(cfg.Resource.Tracer.Filename, "*", id)
 	}
 
-	client, trace, err := newClient(ctx, cfg, log, reg)
+	client, trace, err := newClient(ctx, cfg, log, env.MetricsRegistry)
 	if err != nil {
 		return err
 	}
@@ -1255,24 +1255,24 @@ type inputMetrics struct {
 	batchProcessingTime metrics.Sample     // histogram of the elapsed successful batch processing times in nanoseconds (time of receipt to time of ACK for non-empty batches).
 }
 
-func newInputMetrics(ctx v2.Context) (*inputMetrics, *monitoring.Registry) {
+func addInputMetrics(reg *monitoring.Registry, unreg func()) *inputMetrics {
 	out := &inputMetrics{
-		unregister:          ctx.MetricsRegistryCancel,
-		resource:            monitoring.NewString(ctx.MetricsRegistry, "resource"),
-		executions:          monitoring.NewUint(ctx.MetricsRegistry, "cel_executions"),
-		batchesReceived:     monitoring.NewUint(ctx.MetricsRegistry, "batches_received_total"),
-		eventsReceived:      monitoring.NewUint(ctx.MetricsRegistry, "events_received_total"),
-		batchesPublished:    monitoring.NewUint(ctx.MetricsRegistry, "batches_published_total"),
-		eventsPublished:     monitoring.NewUint(ctx.MetricsRegistry, "events_published_total"),
+		unregister:          unreg,
+		resource:            monitoring.NewString(reg, "resource"),
+		executions:          monitoring.NewUint(reg, "cel_executions"),
+		batchesReceived:     monitoring.NewUint(reg, "batches_received_total"),
+		eventsReceived:      monitoring.NewUint(reg, "events_received_total"),
+		batchesPublished:    monitoring.NewUint(reg, "batches_published_total"),
+		eventsPublished:     monitoring.NewUint(reg, "events_published_total"),
 		celProcessingTime:   metrics.NewUniformSample(1024),
 		batchProcessingTime: metrics.NewUniformSample(1024),
 	}
-	_ = adapter.NewGoMetrics(ctx.MetricsRegistry, "cel_processing_time", adapter.Accept).
+	_ = adapter.NewGoMetrics(reg, "cel_processing_time", adapter.Accept).
 		Register("histogram", metrics.NewHistogram(out.celProcessingTime))
-	_ = adapter.NewGoMetrics(ctx.MetricsRegistry, "batch_processing_time", adapter.Accept).
+	_ = adapter.NewGoMetrics(reg, "batch_processing_time", adapter.Accept).
 		Register("histogram", metrics.NewHistogram(out.batchProcessingTime))
 
-	return out, ctx.MetricsRegistry
+	return out
 }
 
 func (m *inputMetrics) Close() {
