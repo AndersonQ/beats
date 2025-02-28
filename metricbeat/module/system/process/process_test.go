@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/elastic/beats/v7/metricbeat/mb"
 	mbtest "github.com/elastic/beats/v7/metricbeat/mb/testing"
@@ -74,7 +75,7 @@ func TestFetchDegradeOnPartial(t *testing.T) {
 		for _, err := range errs {
 			assert.ErrorIsf(t, err, process.NonFatalErr{}, "Expected non-fatal error, got %v", err)
 		}
-		assert.NotEmpty(t, events)
+		require.NotEmpty(t, events)
 
 		t.Logf("fetched %d events, showing events[0]:", len(events))
 		t.Logf("%s/%s event: %+v", f.Module().Name(), f.Name(),
