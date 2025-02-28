@@ -19,10 +19,12 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	v2 "github.com/elastic/beats/v7/filebeat/input/v2"
+	"github.com/elastic/beats/v7/libbeat/monitoring/inputmon"
 	beattest "github.com/elastic/beats/v7/libbeat/publisher/testing"
 	conf "github.com/elastic/elastic-agent-libs/config"
 	"github.com/elastic/elastic-agent-libs/logp"
 	"github.com/elastic/elastic-agent-libs/mapstr"
+	"github.com/elastic/elastic-agent-libs/monitoring"
 )
 
 var testCases = []struct {
@@ -1658,12 +1660,22 @@ func newChainPaginationTestServer(
 
 func newV2Context(id string) (v2.Context, func()) {
 	ctx, cancel := context.WithCancel(context.Background())
+	reg, cancelReg := inputmon.NewInputRegistry(
+		inputName,
+		id,
+		monitoring.GetNamespace("dataset").GetRegistry(),
+	)
 	return v2.Context{
-		Logger:        logp.NewLogger("httpjson_test"),
-		ID:            id,
-		IDWithoutName: id,
-		Cancelation:   ctx,
-	}, cancel
+			MetricsRegistry:       reg,
+			MetricsRegistryCancel: cancelReg,
+			Logger:                logp.NewLogger("httpjson_test"),
+			ID:                    id,
+			IDWithoutName:         id,
+			Cancelation:           ctx,
+		}, func() {
+			cancel()
+			cancelReg()
+		}
 }
 
 //nolint:errcheck // We can safely ignore errors here
