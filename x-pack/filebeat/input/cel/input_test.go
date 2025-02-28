@@ -1923,14 +1923,14 @@ func TestInput(t *testing.T) {
 			defer cancel()
 
 			id := "test_id:" + test.name
-			reg, cancel := inputmon.NewInputRegistry(
+			reg, cancelReg := inputmon.NewInputRegistry(
 				input{}.Name(),
 				id,
 				monitoring.GetNamespace("dataset").GetRegistry().NewRegistry(id),
 			)
 			v2Ctx := v2.Context{
 				MetricsRegistry:       reg,
-				MetricsRegistryCancel: cancel,
+				MetricsRegistryCancel: cancelReg,
 				Logger:                logp.NewLogger("cel_test"),
 				ID:                    id,
 				IDWithoutName:         id,
