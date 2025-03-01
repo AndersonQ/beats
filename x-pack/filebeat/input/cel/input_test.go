@@ -1924,7 +1924,10 @@ func TestInput(t *testing.T) {
 			id := "test_id:" + test.name
 			reg := monitoring.GetNamespace("dataset").GetRegistry().
 				NewRegistry(id)
+			beatInfo := beat.Info{}
+			beatInfo.Monitoring.Namespace = monitoring.GetNamespace("dataset")
 			v2Ctx := v2.Context{
+				Agent:           beatInfo,
 				MetricsRegistry: reg,
 				MetricsRegistryCancel: func() {
 					monitoring.GetNamespace("dataset").GetRegistry().

@@ -330,7 +330,6 @@ func TestManager_InputsRun(t *testing.T) {
 			uuid.Must(uuid.NewV4()).String())
 		err = inp.Run(input.Context{
 			ID:          inputID,
-			Name:        inputType,
 			Agent:       beatInfo,
 			Logger:      manager.Logger,
 			Cancelation: cancelCtx,
