@@ -295,7 +295,6 @@ func TestManager_InputsRun(t *testing.T) {
 	t.Run("sub contexts created with new metrics registry", func(t *testing.T) {
 		defer resources.NewGoroutinesChecker().Check(t)
 
-		inputType := "inputType"
 		inputID := "input-id"
 		sourceName := "source-1"
 
@@ -303,10 +302,9 @@ func TestManager_InputsRun(t *testing.T) {
 			OnRun: func(ctx input.Context, source Source, cursor Cursor, publisher Publisher) error {
 				assert.Equal(t, ctx.ID, inputID+"::"+sourceName)
 				assert.NotNil(t, ctx.MetricsRegistryCancel)
-				require.NotNil(t, ctx.MetricsRegistry)
-				snapshot := monitoring.CollectFlatSnapshot(ctx.MetricsRegistry, monitoring.Full, true)
-				assert.Equal(t, inputType, snapshot.Strings["input"])
-				assert.Equal(t, ctx.ID, snapshot.Strings["id"])
+				assert.NotNil(t, ctx.MetricsRegistry)
+				assert.NotNil(t, ctx.Agent.Monitoring.Namespace.GetRegistry().
+					GetRegistry(inputID+"::"+sourceName))
 				return nil
 			},
 		}
@@ -452,6 +450,7 @@ func TestManager_InputsRun(t *testing.T) {
 		inp, err := manager.Create(conf.MustNewConfigFrom(runConfig{Max: 3}))
 		require.NoError(t, err)
 		require.NoError(t, inp.Run(input.Context{
+			ID:          "1st-instance",
 			Agent:       beatInfo,
 			Logger:      log,
 			Cancelation: context.Background(),
@@ -461,6 +460,7 @@ func TestManager_InputsRun(t *testing.T) {
 		inp, err = manager.Create(conf.MustNewConfigFrom(runConfig{Max: 3}))
 		require.NoError(t, err)
 		_ = inp.Run(input.Context{
+			ID:          "2nd-instance",
 			Agent:       beatInfo,
 			Logger:      log,
 			Cancelation: context.Background(),
