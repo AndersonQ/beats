@@ -194,8 +194,11 @@ func createFilestreamTestRunner(ctx context.Context, b testing.TB, testID string
 	input, err := p.Manager.Create(c)
 	require.NoError(b, err)
 
+	beatInfo := beat.Info{}
+	beatInfo.Monitoring.Namespace = monitoring.GetNamespace(b.Name())
 	ctx, cancel := context.WithCancel(ctx)
 	v2ctx := v2.Context{
+		Agent:                 beatInfo,
 		MetricsRegistry:       monitoring.NewRegistry(),
 		MetricsRegistryCancel: func() {},
 		Logger:                logger,

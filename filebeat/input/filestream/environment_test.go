@@ -129,7 +129,10 @@ func (e *inputTestingEnvironment) startInput(ctx context.Context, id string, inp
 	go func(wg *sync.WaitGroup, grp *unison.TaskGroup) {
 		defer wg.Done()
 		defer func() { _ = grp.Stop() }()
+		beatInfo := beat.Info{}
+		beatInfo.Monitoring.Namespace = monitoring.GetNamespace("dataset")
 		inputCtx := v2.Context{
+			Agent: beatInfo,
 			MetricsRegistry: monitoring.GetNamespace("dataset").
 				GetRegistry().NewRegistry(id),
 			MetricsRegistryCancel: func() {
