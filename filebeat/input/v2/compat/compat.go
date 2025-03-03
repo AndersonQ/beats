@@ -143,6 +143,16 @@ func (r *runner) Start() {
 		if r.emptyInputID {
 			inputID = ""
 		}
+
+		// There is a bit of a chicken-egg issue here. In general the pipeline
+		// client will be created before the input register its metrics.
+		// Therefore, here just the registry is created. Later, when the input
+		// register its metrics, it'll add the `id` and `input` strings to the
+		// registry, which will make the registry valid to be published in the
+		// '/inputs/' monitoring endpoint. Also, some inputs use a different name
+		// than `r.input.Name()` when registering the metrics, another reason
+		// why it does not make sense to move the call to
+		// `inputmon.NewInputRegistry` here.
 		reg := r.agent.Monitoring.Namespace.GetRegistry().
 			NewRegistry(inputmon.SanitizeID(inputID))
 		err := r.input.Run(
