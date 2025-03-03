@@ -138,7 +138,7 @@ func (i input) run(env v2.Context, src *source, cursor map[string]interface{}, p
 	cfg := src.cfg
 	log := env.Logger.With("input_url", cfg.Resource.URL)
 
-	metrics, reg := addInputMetrics(env)
+	metrics, reg := newInputMetrics(env)
 	defer metrics.Close()
 
 	ctx := ctxtool.FromCanceller(env.Cancelation)
@@ -1256,7 +1256,7 @@ type inputMetrics struct {
 	batchProcessingTime metrics.Sample     // histogram of the elapsed successful batch processing times in nanoseconds (time of receipt to time of ACK for non-empty batches).
 }
 
-func addInputMetrics(ctx v2.Context) (*inputMetrics, *monitoring.Registry) {
+func newInputMetrics(ctx v2.Context) (*inputMetrics, *monitoring.Registry) {
 	reg, unreg := inputmon.NewInputRegistry(inputName, ctx.ID,
 		ctx.Agent.Monitoring.Namespace.GetRegistry())
 	out := &inputMetrics{

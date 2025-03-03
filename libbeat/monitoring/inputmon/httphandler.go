@@ -44,7 +44,14 @@ type handler struct {
 // AttachHandler attaches an HTTP handler to the given mux.Router to handle
 // requests to /inputs.
 func AttachHandler(beatInfo beat.Info, r *mux.Router) error {
-	return attachHandler(r, globalRegistry(), beatInfo.Monitoring.Namespace.GetRegistry())
+	var reg *monitoring.Registry
+	if beatInfo.Monitoring.Namespace != nil {
+		reg = beatInfo.Monitoring.Namespace.GetRegistry()
+	} else {
+		reg = monitoring.NewRegistry()
+	}
+
+	return attachHandler(r, globalRegistry(), reg)
 }
 
 func attachHandler(r *mux.Router, datasetReg, beatReg *monitoring.Registry) error {
