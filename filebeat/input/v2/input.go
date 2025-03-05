@@ -88,17 +88,29 @@ type Context struct {
 	Agent beat.Info
 
 	// MetricsRegistry to collect metrics for this input.
-	// The context now provides a metrics registry for input metrics,
-	// sourced from beat.Info.Monitoring.Namespace.
-	// For compatibility, beats are configured with the global 'dataset'
-	// namespace in beat.Info.Monitoring.Namespace.
-	// When running as an OTel receiver, each beat.Beat instance has a unique
-	// metrics namespace.
-	// Additionally, inputmon has been updated to consider both the global
-	// 'dataset' namespace and beat.Info.Monitoring.Namespace when retrieving
-	// metrics.
-	// Consequently, inputs are not required to immediately adopt the new
-	// registry for their metrics.
+	//
+	// This registry is created on the beat.Info.Monitoring.Namespace. For
+	// compatibility, beats are configured with the global 'dataset' namespace
+	// in beat.Info.Monitoring.Namespace. When running as an OTel receiver, each
+	// beat.Beat instance uses a unique metrics namespace.
+	//
+	// If the input has no ID, this is a 'discard' registry associated to no
+	// namespace.
+	// The inputs still need to call inputmon.NewInputRegistry to further
+	// populate the registry by adding `id` and `input` (the input type) so the
+	// metrics will be published on the `/inputs/` monitoring endpoint.
+	// This allows the inputs to decide to publish or not metrics, regardless of
+	// the input having an ID and therefore a valid metrics registry which will
+	// be passed down to the pipeline client and output. Also it allows the
+	// inputs to set their type, the `input` field, as they will. Not all inputs
+	// use their hard-coded name as their type, thus the input itself needs to
+	// set it.
+	//
+	// Note: There is also a cancel function, MetricsRegistryCancel. This is
+	// handled automatically by the pipeline client during input shutdown,
+	// ensuring proper resource cleanup if the input does not register metrics.
+	// Regardless, inputs should still invoke the cancel function returned by
+	// inputmon.NewInputRegistry.
 	MetricsRegistry *monitoring.Registry
 	// MetricsRegistryCancel unregisters MetricsRegistry.
 	MetricsRegistryCancel func()

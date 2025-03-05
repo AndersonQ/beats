@@ -185,11 +185,11 @@ type: test
 		require.Truef(t, ok, "inpRunner should be a %T", &runner{})
 
 		assert.Equal(t, got.id, inputID, "runner id should be the config id")
-		assert.False(t, got.emptyInputID,
-			"config has an ID, thus 'emptyInputID' should be false")
+		assert.False(t, got.generatedID,
+			"config has an ID, thus 'generatedID' should be false")
 	})
 
-	t.Run("creates id when absent and sets emptyInputID to true", func(t *testing.T) {
+	t.Run("creates id when absent and sets generatedID to true", func(t *testing.T) {
 		log := logp.NewLogger("test")
 
 		beatInfo := beat.Info{}
@@ -221,8 +221,8 @@ type: test
 		require.Truef(t, ok, "inpRunner should be a %T", &runner{})
 
 		assert.NotEmpty(t, got.id)
-		assert.True(t, got.emptyInputID,
-			"config did not have an ID, thus 'emptyInputID' should be true")
+		assert.True(t, got.generatedID,
+			"config did not have an ID, thus 'generatedID' should be true")
 	})
 }
 

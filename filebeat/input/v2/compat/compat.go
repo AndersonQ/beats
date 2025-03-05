@@ -36,6 +36,7 @@ import (
 	"github.com/elastic/beats/v7/libbeat/monitoring/inputmon"
 	conf "github.com/elastic/elastic-agent-libs/config"
 	"github.com/elastic/elastic-agent-libs/logp"
+	"github.com/elastic/elastic-agent-libs/monitoring"
 	"github.com/elastic/go-concert/ctxtool"
 )
 
@@ -54,9 +55,9 @@ type factory struct {
 // has returned.
 type runner struct {
 	id string
-	// emptyInputID is true when the config does not include an ID and therefore
+	// generatedID is true when the config does not include an ID and therefore
 	// the runner uses a hash from the config as ID.
-	emptyInputID   bool
+	generatedID    bool
 	log            *logp.Logger
 	agent          *beat.Info
 	wg             sync.WaitGroup
@@ -108,19 +109,19 @@ func (f *factory) Create(
 		return nil, err
 	}
 
-	id, wasEmpty, err := configID(config)
+	id, generatedID, err := configID(config)
 	if err != nil {
 		return nil, err
 	}
 
 	return &runner{
-		id:           id,
-		emptyInputID: wasEmpty,
-		log:          f.log.Named(input.Name()).With("id", id),
-		agent:        &f.info,
-		sig:          ctxtool.WithCancelContext(context.Background()),
-		input:        input,
-		connector:    p,
+		id:          id,
+		generatedID: generatedID,
+		log:         f.log.Named(input.Name()).With("id", id),
+		agent:       &f.info,
+		sig:         ctxtool.WithCancelContext(context.Background()),
+		input:       input,
+		connector:   p,
 	}, nil
 }
 
@@ -140,34 +141,42 @@ func (r *runner) Start() {
 		log.Infof("Input '%s' starting", name)
 
 		inputID := r.id
-		if r.emptyInputID {
-			inputID = ""
+
+		var reg *monitoring.Registry
+		var unregfunc func()
+		if !r.generatedID {
+			// There is a bit of a chicken-egg issue here. In general the pipeline
+			// client will be created before the input register its metrics.
+			// Therefore, here just the registry is created. Later, when the input
+			// register its metrics, it'll add the `id` and `input` strings to the
+			// registry, which will make the registry valid to be published in the
+			// '/inputs/' monitoring endpoint. Also, some inputs use a different name
+			// than `r.input.Name()` when registering the metrics, another reason
+			// why it does not make sense to move the call to
+			// `inputmon.NewInputRegistry` here.
+			reg = r.agent.Monitoring.Namespace.GetRegistry().
+				NewRegistry(inputmon.SanitizeID(r.id))
+			unregfunc = func() {
+				r.agent.Monitoring.Namespace.GetRegistry().
+					Remove(inputmon.SanitizeID(inputID))
+			}
+		} else {
+			// when the input has no ID, no metric is published, therefore, we
+			// use a 'discard' registry.
+			reg = monitoring.NewRegistry()
+			unregfunc = func() {}
 		}
 
-		// There is a bit of a chicken-egg issue here. In general the pipeline
-		// client will be created before the input register its metrics.
-		// Therefore, here just the registry is created. Later, when the input
-		// register its metrics, it'll add the `id` and `input` strings to the
-		// registry, which will make the registry valid to be published in the
-		// '/inputs/' monitoring endpoint. Also, some inputs use a different name
-		// than `r.input.Name()` when registering the metrics, another reason
-		// why it does not make sense to move the call to
-		// `inputmon.NewInputRegistry` here.
-		reg := r.agent.Monitoring.Namespace.GetRegistry().
-			NewRegistry(inputmon.SanitizeID(inputID))
 		err := r.input.Run(
 			v2.Context{
-				ID:              r.id,
-				IDWithoutName:   r.id,
-				Agent:           *r.agent,
-				MetricsRegistry: reg,
-				MetricsRegistryCancel: func() {
-					r.agent.Monitoring.Namespace.GetRegistry().
-						Remove(inputmon.SanitizeID(inputID))
-				},
-				Logger:         log,
-				Cancelation:    r.sig,
-				StatusReporter: r.statusReporter,
+				ID:                    r.id,
+				IDWithoutName:         r.id,
+				Agent:                 *r.agent,
+				MetricsRegistry:       reg,
+				MetricsRegistryCancel: unregfunc,
+				Logger:                log,
+				Cancelation:           r.sig,
+				StatusReporter:        r.statusReporter,
 			},
 			r.connector,
 		)
