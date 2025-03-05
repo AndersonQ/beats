@@ -100,11 +100,12 @@ type Context struct {
 	// populate the registry by adding `id` and `input` (the input type) so the
 	// metrics will be published on the `/inputs/` monitoring endpoint.
 	// This allows the inputs to decide to publish or not metrics, regardless of
-	// the input having an ID and therefore a valid metrics registry which will
-	// be passed down to the pipeline client and output. Also it allows the
-	// inputs to set their type, the `input` field, as they will. Not all inputs
-	// use their hard-coded name as their type, thus the input itself needs to
-	// set it.
+	// the input having an ID. A valid metrics registry which will be passed
+	// down to the pipeline client and output. Hoerver if the input does not
+	// call inputmon.NewInputRegistry for the same ID to further populate the
+	// Also, calling inputmon.NewInputRegistry allows inputs to set their type,
+	// the `input` field, as they will. Not all inputs use their hard-coded
+	// name as their type, thus the input itself needs to set it.
 	//
 	// Note: There is also a cancel function, MetricsRegistryCancel. This is
 	// handled automatically by the pipeline client during input shutdown,
