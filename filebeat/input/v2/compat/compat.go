@@ -52,7 +52,11 @@ type factory struct {
 // On stop the runner triggers the shutdown signal and waits until the input
 // has returned.
 type runner struct {
-	id             string
+	id string
+	// generatedID is true when the config does not include an ID and therefore
+	// the runner uses a hash from the config as ID. It's passed to the
+	// v2.Context so it can know if this input should publish metrics or not.
+	generatedID    bool
 	log            *logp.Logger
 	agent          *beat.Info
 	wg             sync.WaitGroup
@@ -104,18 +108,19 @@ func (f *factory) Create(
 		return nil, err
 	}
 
-	id, err := configID(config)
+	id, generatedID, err := configID(config)
 	if err != nil {
 		return nil, err
 	}
 
 	return &runner{
-		id:        id,
-		log:       f.log.Named(input.Name()).With("id", id),
-		agent:     &f.info,
-		sig:       ctxtool.WithCancelContext(context.Background()),
-		input:     input,
-		connector: p,
+		id:          id,
+		generatedID: generatedID,
+		log:         f.log.Named(input.Name()).With("id", id),
+		agent:       &f.info,
+		sig:         ctxtool.WithCancelContext(context.Background()),
+		input:       input,
+		connector:   p,
 	}, nil
 }
 
@@ -133,15 +138,17 @@ func (r *runner) Start() {
 	go func() {
 		defer r.wg.Done()
 		log.Infof("Input '%s' starting", name)
+		ctx := v2.Context{
+			ID:             r.id,
+			IDWithoutName:  r.id,
+			GeneratedID:    r.generatedID,
+			Agent:          *r.agent,
+			Logger:         log,
+			Cancelation:    r.sig,
+			StatusReporter: r.statusReporter,
+		}
 		err := r.input.Run(
-			v2.Context{
-				ID:             r.id,
-				IDWithoutName:  r.id,
-				Agent:          *r.agent,
-				Logger:         log,
-				Cancelation:    r.sig,
-				StatusReporter: r.statusReporter,
-			},
+			ctx,
 			r.connector,
 		)
 		if err != nil && !errors.Is(err, context.Canceled) {
@@ -149,6 +156,9 @@ func (r *runner) Start() {
 		} else {
 			log.Infof("Input '%s' stopped (goroutine)", name)
 		}
+
+		// Input finished running, unregister the metrics
+		ctx.UnregisterMetrics()
 	}()
 }
 
@@ -159,30 +169,37 @@ func (r *runner) Stop() {
 	r.statusReporter = nil
 }
 
-func configID(config *conf.C) (string, error) {
+// configID extracts or generates an ID for a configuration.
+// If the "id" is present in config and is non-empty, it is returned.
+// If the "id" is absent or empty, the function calculates a hash of the
+// entire configuration and returns it as a hexadecimal string as the ID.
+// The function returns the ID, a boolean indicating whether the ID
+// was generated (true) or extracted from the config (false), and an error, if
+// any.
+func configID(config *conf.C) (string, bool, error) {
 	tmp := struct {
 		ID string `config:"id"`
 	}{}
 	if err := config.Unpack(&tmp); err != nil {
-		return "", fmt.Errorf("error extracting ID: %w", err)
+		return "", false, fmt.Errorf("error extracting ID: %w", err)
 	}
 	if tmp.ID != "" {
-		return tmp.ID, nil
+		return tmp.ID, false, nil
 	}
 
 	var h map[string]interface{}
 	err := config.Unpack(&h)
 	if err != nil {
-		return "", fmt.Errorf("could not unpack config into %T: unpack failed: %w",
+		return "", false, fmt.Errorf("could not unpack config into %T: unpack failed: %w",
 			h, err)
 	}
 
 	id, err := hashstructure.Hash(h, nil)
 	if err != nil {
-		return "", fmt.Errorf("can not compute id from configuration: %w", err)
+		return "", false, fmt.Errorf("can not compute id from configuration: %w", err)
 	}
 
-	return fmt.Sprintf("%16X", id), nil
+	return fmt.Sprintf("%16X", id), true, nil
 }
 
 func (f *factory) generateCheckConfig(config *conf.C) (*conf.C, error) {
