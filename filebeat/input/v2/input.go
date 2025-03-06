@@ -89,27 +89,27 @@ type Context struct {
 
 	// MetricsRegistry to collect metrics for this input.
 	//
-	// This registry is created on the beat.Info.Monitoring.Namespace. For
-	// compatibility, beats are configured with the global 'dataset' namespace
-	// in beat.Info.Monitoring.Namespace. When running as an OTel receiver, each
-	// beat.Beat instance uses a unique metrics namespace.
+	// This registry resides in beat.Info.Monitoring.Namespace, the global
+	// 'dataset' for Beats or a unique namespace for beats as OTel receivers.
 	//
-	// If the input has no ID, this is a 'discard' registry associated to no
-	// namespace.
-	// The inputs still need to call inputmon.NewInputRegistry to further
-	// populate the registry by adding `id` and `input` (the input type) so the
-	// metrics will be published on the `/inputs/` monitoring endpoint.
-	// This allows the inputs to decide to publish or not metrics, regardless of
-	// the input having an ID. A valid metrics registry which will be passed
-	// down to the pipeline client and output. Hoerver if the input does not
-	// call inputmon.NewInputRegistry for the same ID to further populate the
-	// Also, calling inputmon.NewInputRegistry allows inputs to set their type,
-	// the `input` field, as they will. Not all inputs use their hard-coded
-	// name as their type, thus the input itself needs to set it.
+	// Inputs without an ID have a 'discard' registry; associated to no
+	// namespace resulting in them not being published.
+	//
+	// Inputs must call inputmon.NewInputRegistry with
+	// beat.Info.Monitoring.Namespace as the parent namespace to add `id` and
+	// `input` (the input type) to the registry, allowing the metrics to be
+	// published by the `/inputs/` monitoring endpoint.
+	// Failure to call inputmon.NewInputRegistry for the same ID prevents metric
+	// publication from this registry, but does not affect metrics registered by
+	// the input on the registry returned by inputmon.NewInputRegistry.
+	// One reason for requiring inputs to call inputmon.NewInputRegistry
+	// is to allow them to set their type, as they will. Not all inputs use
+	// their hard-coded name as their type, thus the input itself needs to set
+	// it.
 	//
 	// Note: There is also a cancel function, MetricsRegistryCancel. This is
-	// handled automatically by the pipeline client during input shutdown,
-	// ensuring proper resource cleanup if the input does not register metrics.
+	// handled automatically by the pipeline client during shutdown, ensuring
+	// proper resource cleanup even if the input does not register metrics.
 	// Regardless, inputs should still invoke the cancel function returned by
 	// inputmon.NewInputRegistry.
 	MetricsRegistry *monitoring.Registry

@@ -211,7 +211,8 @@ func (p *Pipeline) ConnectWith(cfg beat.ClientConfig) (beat.Client, error) {
 
 	reg, regCancel := cfg.InputMetricsRegistry, cfg.InputMetricsRegistryCancel
 	if reg == nil {
-		// No registry, then create a 'discard' registry.
+		// No registry, then create a registry which will not publish any metric,
+		// a 'discard' registry.
 		reg = monitoring.NewRegistry()
 		regCancel = func() {}
 	}

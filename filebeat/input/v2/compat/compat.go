@@ -56,7 +56,9 @@ type factory struct {
 type runner struct {
 	id string
 	// generatedID is true when the config does not include an ID and therefore
-	// the runner uses a hash from the config as ID.
+	// the runner uses a hash from the config as ID. It's used to know if the
+	// v2.Context generated for the input should have a non-discard metric
+	// registry.
 	generatedID    bool
 	log            *logp.Logger
 	agent          *beat.Info
@@ -161,8 +163,9 @@ func (r *runner) Start() {
 					Remove(inputmon.SanitizeID(inputID))
 			}
 		} else {
-			// when the input has no ID, no metric is published, therefore, we
-			// use a 'discard' registry.
+			// when the input has no ID, no metric is published, therefore, it
+			// uses a registry which will not publish any metric, 'discard'
+			// registry.
 			reg = monitoring.NewRegistry()
 			unregfunc = func() {}
 		}

@@ -147,7 +147,7 @@ logging.level: debug
 		fmt.Sprintf("End of file reached: %s; Backoff now.", logFilePath),
 		10*time.Second, "Filebeat did not close the file")
 
-	// 5. Now that the reader has been closed, we can make the assertions.
+	// 5. Now that the file was fully read, we can make the assertions.
 
 	type inputMetric struct {
 		EventsPipelineTotal          int `json:"events_pipeline_total"`
