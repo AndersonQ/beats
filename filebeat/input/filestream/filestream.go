@@ -98,6 +98,7 @@ func newFileReader(
 
 // Read reads from the reader and updates the offset
 // The total number of bytes read is returned.
+// 6 - actually read the files
 func (f *logFile) Read(buf []byte) (int, error) {
 	totalN := 0
 

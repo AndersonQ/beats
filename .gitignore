@@ -45,3 +45,7 @@ x-pack/dockerlogbeat/temproot.tar
 
 # Files generated with the bump version automations
 *.bck
+
+filebeat/input/filestream/testdata/gzip/huge.log
+
+filebeat/input/filestream/testdata/gzip/huge.log.gz

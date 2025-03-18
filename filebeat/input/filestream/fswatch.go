@@ -122,6 +122,7 @@ func (w *fileWatcher) Run(ctx unison.Canceler) {
 	})
 }
 
+// 3 - watch the file system by scanning with intervals and comparing the diffs
 func (w *fileWatcher) watch(ctx unison.Canceler) {
 	w.log.Debug("Start next scan")
 
