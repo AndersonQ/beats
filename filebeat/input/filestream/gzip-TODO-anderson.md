@@ -1,16 +1,16 @@
 # My TODO
 
  - definitive test of OTel file log receiver:
-   - [] does it keep state
-   - [] does it keep state of gzip files
-   - [] does it can actually read gzip files "from the end"?
+   - [x] does it keep state
+   - [x] does it keep state of gzip files
+   - [x] does it can actually read gzip files "from the end"?
  - Vector: "You should also have zero ambiguity about what Vector does."
    - Vector and Splunk decompress them for reading. Vector does not explain what it means by that, -> Just read the source and/or just test it.
- - [] file rotation from plain to gzip. "When a file is rotated and replaced with a gzip compressed alternative, we still have a handle open to the uncompressed version even if it is "deleted" correct? Or we can be configured to do this?"
-   - [] how file rotation works right now?
-   - [] is there any other file identity besides fingerprint that can cover
+ - [x] file rotation from plain to gzip. "When a file is rotated and replaced with a gzip compressed alternative, we still have a handle open to the uncompressed version even if it is "deleted" correct? Or we can be configured to do this?"
+   - [x] how file rotation works right now?
+   - [x] is there any other file identity besides fingerprint that can cover
  plain -> gzip rotation?
- - Verification plan: use https://github.com/elastic/benchbuilder to check the
+ - [x] Verification plan: use https://github.com/elastic/benchbuilder to check the
 performance
 
 

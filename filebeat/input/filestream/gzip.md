@@ -22,6 +22,11 @@ The test utilizes `filestream` mechanisms to read the file line by line, providi
 
 The `gzipSeekerReader` is capable of seeking within a gzip file by reading decompressed data up to the required offset. The test employs two `gzipSeekerReader` instances: one to read the initial half, and another to read the remaining portion. The test verifies that the expected number of lines are read to ensure the data is fully read. Relying solely on reading to the end of the file would succeed even if some lines in the middle were missing.
 
+The tests use 2 different approaches to generate log lines:
+ - `static-line` generates `line LINE_NUM - line`
+ - `random-line` generates `line LINE_NUM - RANDOM TEXT`
+It's done to avoid falling into the compression/decompression algorithm best case.
+
 The test/benchmark are on `filebeat/input/filestream/gzip_test.go`.
 
 tl;dr:
@@ -43,6 +48,13 @@ to choose if the benchmark will run for plain file or GZIP. Then run the benchma
 go test -bench=^BenchmarkGzip$ -run=^$ -benchmem > plain.out
 go test -bench=^BenchmarkGzip$ -run=^$ -benchmem > gzip.out
 ```
+
+To reproduce the results comparing the time difference between the two run the
+`TestTimeDifferenceGzipPlain` test:
+```shell
+go test -v -run=^TestTimeDifferenceGzipPlain$ .
+```
+
 
 ## Plain vs GZIP
 
