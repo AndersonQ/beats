@@ -79,8 +79,9 @@ func Test_RunEtwInput_NewSessionError(t *testing.T) {
 
 	// Setup input
 	inputCtx := input.Context{
-		Cancelation: nil,
-		Logger:      logp.NewLogger("test"),
+		Cancelation:     nil,
+		Logger:          logp.NewLogger("test"),
+		MetricsRegistry: monitoring.NewRegistry(),
 	}
 
 	etwInput := &etwInput{
@@ -93,7 +94,7 @@ func Test_RunEtwInput_NewSessionError(t *testing.T) {
 		},
 		operator: mockOperator,
 		metrics: newInputMetrics(
-			"test", input.Context{MetricsRegistry: monitoring.NewRegistry()}),
+			"test", inputCtx),
 	}
 
 	// Run test
@@ -121,8 +122,9 @@ func Test_RunEtwInput_AttachToExistingSessionError(t *testing.T) {
 
 	// Setup input
 	inputCtx := input.Context{
-		Cancelation: nil,
-		Logger:      logp.NewLogger("test"),
+		Cancelation:     nil,
+		Logger:          logp.NewLogger("test"),
+		MetricsRegistry: monitoring.NewRegistry(),
 	}
 
 	etwInput := &etwInput{
@@ -135,7 +137,7 @@ func Test_RunEtwInput_AttachToExistingSessionError(t *testing.T) {
 		},
 		operator: mockOperator,
 		metrics: newInputMetrics(
-			"test", input.Context{MetricsRegistry: monitoring.NewRegistry()}),
+			"test", inputCtx),
 	}
 
 	// Run test
@@ -167,8 +169,9 @@ func Test_RunEtwInput_CreateRealtimeSessionError(t *testing.T) {
 
 	// Setup input
 	inputCtx := input.Context{
-		Cancelation: nil,
-		Logger:      logp.NewLogger("test"),
+		Cancelation:     nil,
+		Logger:          logp.NewLogger("test"),
+		MetricsRegistry: monitoring.NewRegistry(),
 	}
 
 	etwInput := &etwInput{
@@ -181,7 +184,7 @@ func Test_RunEtwInput_CreateRealtimeSessionError(t *testing.T) {
 		},
 		operator: mockOperator,
 		metrics: newInputMetrics(
-			"test", input.Context{MetricsRegistry: monitoring.NewRegistry()}),
+			"test", inputCtx),
 	}
 
 	// Run test
@@ -225,8 +228,9 @@ func Test_RunEtwInput_StartConsumerError(t *testing.T) {
 
 	// Setup input
 	inputCtx := input.Context{
-		Cancelation: ctx,
-		Logger:      logp.NewLogger("test"),
+		Cancelation:     ctx,
+		Logger:          logp.NewLogger("test"),
+		MetricsRegistry: monitoring.NewRegistry(),
 	}
 
 	etwInput := &etwInput{
@@ -239,7 +243,7 @@ func Test_RunEtwInput_StartConsumerError(t *testing.T) {
 		},
 		operator: mockOperator,
 		metrics: newInputMetrics(
-			"test", input.Context{MetricsRegistry: monitoring.NewRegistry()}),
+			"test", inputCtx),
 	}
 
 	// Run test
@@ -283,8 +287,9 @@ func Test_RunEtwInput_Success(t *testing.T) {
 
 	// Setup input
 	inputCtx := input.Context{
-		Cancelation: ctx,
-		Logger:      logp.NewLogger("test"),
+		Cancelation:     ctx,
+		Logger:          logp.NewLogger("test"),
+		MetricsRegistry: monitoring.NewRegistry(),
 	}
 
 	etwInput := &etwInput{
@@ -297,7 +302,7 @@ func Test_RunEtwInput_Success(t *testing.T) {
 		},
 		operator: mockOperator,
 		metrics: newInputMetrics(
-			"test", input.Context{MetricsRegistry: monitoring.NewRegistry()}),
+			"test", inputCtx),
 	}
 
 	// Run test
