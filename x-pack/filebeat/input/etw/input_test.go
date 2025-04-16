@@ -136,8 +136,6 @@ func Test_RunEtwInput_AttachToExistingSessionError(t *testing.T) {
 			MatchAllKeyword: 0,
 		},
 		operator: mockOperator,
-		metrics: newInputMetrics(
-			"test", inputCtx),
 	}
 
 	// Run test
@@ -183,8 +181,6 @@ func Test_RunEtwInput_CreateRealtimeSessionError(t *testing.T) {
 			MatchAllKeyword: 0,
 		},
 		operator: mockOperator,
-		metrics: newInputMetrics(
-			"test", inputCtx),
 	}
 
 	// Run test
@@ -242,8 +238,6 @@ func Test_RunEtwInput_StartConsumerError(t *testing.T) {
 			MatchAllKeyword: 0,
 		},
 		operator: mockOperator,
-		metrics: newInputMetrics(
-			"test", inputCtx),
 	}
 
 	// Run test
@@ -301,8 +295,6 @@ func Test_RunEtwInput_Success(t *testing.T) {
 			MatchAllKeyword: 0,
 		},
 		operator: mockOperator,
-		metrics: newInputMetrics(
-			"test", inputCtx),
 	}
 
 	// Run test
