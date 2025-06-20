@@ -1052,6 +1052,7 @@ func filenames(m map[string]loginp.FileDescriptor) (result string) {
 	return result
 }
 
+// TODO(anderson): check benchmark
 func BenchmarkToFileDescriptor(b *testing.B) {
 	dir := b.TempDir()
 	basename := "created.log"
