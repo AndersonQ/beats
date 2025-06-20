@@ -1,4 +1,4 @@
-package filestream
+package gzip_devel
 
 import (
 	"bytes"
