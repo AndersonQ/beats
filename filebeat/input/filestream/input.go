@@ -156,10 +156,17 @@ func (inp *filestream) Run(
 		state.Offset = 0
 	}
 
+	// TODO(AndersonQ): add gzip metrics
 	metrics.FilesActive.Inc()
 	metrics.HarvesterRunning.Inc()
 	defer metrics.FilesActive.Dec()
 	defer metrics.HarvesterRunning.Dec()
+	if fs.desc.GZIP {
+		metrics.FilesGZIPActive.Inc()
+		metrics.HarvesterGZIPRunning.Inc()
+		defer metrics.FilesGZIPActive.Dec()
+		defer metrics.HarvesterGZIPRunning.Dec()
+	}
 
 	_, streamCancel := ctxtool.WithFunc(ctx.Cancelation, func() {
 		log.Debug("Closing reader of filestream")
@@ -172,7 +179,8 @@ func (inp *filestream) Run(
 
 	// The caller of Run already reports the error and filters out errors that
 	// must not be reported, like 'context cancelled'.
-	return inp.readFromSource(ctx, log, r, fs.newPath, state, publisher, metrics)
+	return inp.readFromSource(
+		ctx, log, r, fs.newPath, state, publisher, fs.desc.GZIP, metrics)
 }
 
 func initState(log *logp.Logger, c loginp.Cursor, s fileSource) state {
@@ -321,7 +329,6 @@ func (inp *filestream) openFile(
 	//  - it should not start reading GZIP files from the beginning if it
 	//  already started ingesting the file.
 	// Therefore, only check truncation for plain files.
-	// TODO(AndersonQ): add test?
 	if !f.IsGZIP() && fi.Size() < offset {
 		// if the file was truncated we need to reset the offset and notify
 		// all callers so they can also reset their offsets
@@ -407,14 +414,24 @@ func (inp *filestream) readFromSource(
 	path string,
 	s state,
 	p loginp.Publisher,
-	metrics *loginp.Metrics,
-) error {
+	isGZIP bool,
+	metrics *loginp.Metrics) error {
+
 	metrics.FilesOpened.Inc()
 	metrics.HarvesterOpenFiles.Inc()
 	metrics.HarvesterStarted.Inc()
 	defer metrics.FilesClosed.Inc()
 	defer metrics.HarvesterOpenFiles.Dec()
 	defer metrics.HarvesterClosed.Inc()
+
+	if isGZIP {
+		metrics.FilesGZIPOpened.Inc()
+		metrics.HarvesterOpenGZIPFiles.Inc()
+		metrics.HarvesterGZIPStarted.Inc()
+		defer metrics.FilesGZIPClosed.Inc()
+		defer metrics.HarvesterOpenGZIPFiles.Dec()
+		defer metrics.HarvesterGZIPClosed.Inc()
+	}
 
 	for ctx.Cancelation.Err() == nil {
 		// next line - r needs to be reading from a gzipped file
@@ -429,6 +446,9 @@ func (inp *filestream) readFromSource(
 			} else {
 				log.Errorf("Read line error: %v", err)
 				metrics.ProcessingErrors.Inc()
+				if isGZIP {
+					metrics.ProcessingGZIPErrors.Inc()
+				}
 			}
 
 			return nil
@@ -442,16 +462,25 @@ func (inp *filestream) readFromSource(
 			if flags, ok := flags.([]string); ok {
 				if slices.Contains(flags, "truncated") { //nolint:typecheck,nolintlint // linter fails to infer generics
 					metrics.MessagesTruncated.Add(1)
+					if isGZIP {
+						metrics.MessagesGZIPTruncated.Add(1)
+					}
 				}
 			}
 		}
 
 		metrics.MessagesRead.Inc()
+		if isGZIP {
+			metrics.MessagesGZIPRead.Inc()
+		}
 		if message.IsEmpty() || inp.isDroppedLine(log, string(message.Content)) {
 			continue
 		}
 
 		metrics.BytesProcessed.Add(uint64(message.Bytes))
+		if isGZIP {
+			metrics.BytesGZIPProcessed.Add(uint64(message.Bytes))
+		}
 
 		// add "take_over" tag if `take_over` is set to true
 		if inp.takeOver.Enabled {
@@ -460,11 +489,18 @@ func (inp *filestream) readFromSource(
 
 		if err := p.Publish(message.ToEvent(), s); err != nil {
 			metrics.ProcessingErrors.Inc()
+			if isGZIP {
+				metrics.ProcessingGZIPErrors.Inc()
+			}
 			return err
 		}
 
 		metrics.EventsProcessed.Inc()
 		metrics.ProcessingTime.Update(time.Since(message.Ts).Nanoseconds())
+		if isGZIP {
+			metrics.EventsGZIPProcessed.Inc()
+			metrics.ProcessingGZIPTime.Update(time.Since(message.Ts).Nanoseconds())
+		}
 	}
 	return nil
 }
