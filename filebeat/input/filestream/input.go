@@ -156,7 +156,6 @@ func (inp *filestream) Run(
 		state.Offset = 0
 	}
 
-	// TODO(AndersonQ): add gzip metrics
 	metrics.FilesActive.Inc()
 	metrics.HarvesterRunning.Inc()
 	defer metrics.FilesActive.Dec()
