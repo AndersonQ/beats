@@ -50,6 +50,7 @@ const pluginName = "filestream"
 
 type state struct {
 	Offset int64 `json:"offset" struct:"offset"`
+	EOF    bool  `json:"eof" struct:"eof"`
 }
 
 type fileMeta struct {
@@ -145,6 +146,12 @@ func (inp *filestream) Run(
 
 	log := ctx.Logger.With("path", fs.newPath).With("state-id", src.Name())
 	state := initState(log, cursor, fs)
+	if state.EOF {
+		// TODO: change it to debug once GZIP isn't experimental anymore.
+		log.Infof("GZIP file %s already read to EOF, not reading it again",
+			fs.newPath)
+		return nil
+	}
 
 	r, truncated, err := inp.open(log, ctx.Cancelation, fs, state.Offset)
 	if err != nil {
@@ -267,6 +274,10 @@ func (inp *filestream) open(
 	r = inp.parsers.Create(r, log)
 
 	r = readfile.NewLimitReader(r, inp.readerConfig.MaxBytes)
+
+	if f.IsGZIP() {
+		r = NewEOFLookaheadReader(r, io.EOF)
+	}
 
 	ok = true // no need to close the file
 	return r, truncated, nil
@@ -442,6 +453,7 @@ func (inp *filestream) readFromSource(
 				log.Debugf("Reader was closed. Closing. Path='%s'", path)
 			} else if errors.Is(err, io.EOF) {
 				log.Debugf("EOF has been reached. Closing. Path='%s'", path)
+				// TODO(AndersonQ): mark the file as done/ingested/not read it ever again
 			} else {
 				log.Errorf("Read line error: %v", err)
 				metrics.ProcessingErrors.Inc()
@@ -486,6 +498,9 @@ func (inp *filestream) readFromSource(
 			_ = mapstr.AddTags(message.Fields, []string{"take_over"})
 		}
 
+		if isGZIP && message.Private == io.EOF {
+			s.EOF = true
+		}
 		if err := p.Publish(message.ToEvent(), s); err != nil {
 			metrics.ProcessingErrors.Inc()
 			if isGZIP {
