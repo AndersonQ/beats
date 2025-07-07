@@ -453,7 +453,6 @@ func (inp *filestream) readFromSource(
 				log.Debugf("Reader was closed. Closing. Path='%s'", path)
 			} else if errors.Is(err, io.EOF) {
 				log.Debugf("EOF has been reached. Closing. Path='%s'", path)
-				// TODO(AndersonQ): mark the file as done/ingested/not read it ever again
 			} else {
 				log.Errorf("Read line error: %v", err)
 				metrics.ProcessingErrors.Inc()
