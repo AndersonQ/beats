@@ -107,7 +107,6 @@ type rotationConfig struct {
 type commonRotationConfig struct {
 	SuffixRegex string `config:"suffix_regex" validate:"required"`
 	DateFormat  string `config:"dateformat"`
-	DateRegex   string `config:"date_regex"`
 }
 
 type copyTruncateConfig commonRotationConfig
