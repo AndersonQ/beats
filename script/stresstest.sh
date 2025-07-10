@@ -38,6 +38,6 @@ stress_options=("${@:3}")
 
 cd "$test_package_path"
 rm "$test_exec_file" 2>/dev/null || true
-go test -c -o "./$test_exec_file"
+go test -tags integration -c -o "./$test_exec_file"
 trap 'rm "./$test_exec_file" 2>/dev/null || true' EXIT INT TERM
 go run golang.org/x/tools/cmd/stress@latest "${stress_options[@]}" "./$test_exec_file" -test.run "$test_regex" -test.v
