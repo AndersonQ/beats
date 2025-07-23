@@ -27,6 +27,7 @@ import (
 	"net"
 	"os"
 	"os/user"
+	"path/filepath"
 	"runtime"
 	"runtime/debug"
 	"strconv"
@@ -79,6 +80,7 @@ import (
 	"github.com/elastic/elastic-agent-libs/monitoring/report/buffer"
 	"github.com/elastic/elastic-agent-libs/paths"
 	svc "github.com/elastic/elastic-agent-libs/service"
+	"github.com/elastic/elastic-agent-libs/testing"
 	"github.com/elastic/elastic-agent-libs/transport/tlscommon"
 	libversion "github.com/elastic/elastic-agent-libs/version"
 	"github.com/elastic/elastic-agent-system-metrics/metric/system/host"
@@ -523,33 +525,100 @@ func (b *Beat) launch(settings Settings, bt beat.Creator) error {
 			}
 			return buff.String()
 		}
-		b.Config.Path.Logs
 
+		// application/json-seq -> ndjson
+		getLogsFiles := func() ([]string, error) {
+			// logs are a resource per file
+			// each file is a resource content with own URI: logsURI/log-file-name
+
+			logPath := b.Config.Path.Logs
+			if logPath == "" {
+				return nil, errors.New("log path is empty")
+			}
+
+			files, err := os.ReadDir(logPath)
+			if err != nil {
+				// If the directory doesn't exist, just return an empty map
+				if os.IsNotExist(err) {
+					return nil, nil
+				}
+				return nil, fmt.Errorf("could not read logs directory: %w", err)
+			}
+
+			var logFiles []string
+			for _, f := range files {
+				if f.IsDir() {
+					continue
+				}
+
+				filePath := filepath.Join(logPath, f.Name())
+				logFiles = append(logFiles, filePath)
+			}
+
+			return logFiles, nil
+		}
+
+		testOutput := func() (string, bool) {
+			im, _ := idxmgmt.DefaultSupport(b.Info, nil)
+			output, err := outputs.Load(
+				im,
+				b.Info,
+				nil,
+				b.Config.Output.Name(),
+				b.Config.Output.Config())
+			if err != nil {
+				return fmt.Sprintf("Error initializing output %s: %v",
+					b.Config.Output.Name(), err), true
+			}
+
+			buff := strings.Builder{}
+			for _, client := range output.Clients {
+				tClient, ok := client.(testing.Testable)
+				if !ok {
+					return fmt.Sprintf("%s output doesn't support testing",
+						b.Config.Output.Name()), true
+				}
+
+				// Perform test:
+				tClient.Test(mcp.NewPlainTextDriver(&buff))
+				buff.WriteString("\n")
+			}
+
+			return buff.String(), false
+		}
 		b.MCP.
-			AddResource(
-				b.Info.Beat+"_config.json",
+			AddResourceLogFiles(b.Info.Beat, getLogsFiles).
+			//
+			AddResource(b.Info.Beat+"/config.json",
 				b.Info.Beat+" configuration",
 				"Configuration for "+b.Info.Beat,
 				"application/yaml",
 				func() string { return getConfig() }).
-			AddResource(
-				b.Info.Beat+"_modules.txt",
+			//
+			AddResource(b.Info.Beat+"/modules.txt",
 				b.Info.Beat+" modules",
 				"List enabled and disabled modules for "+b.Info.Beat,
 				"text/plain",
 				func() string { return getModules() }).
-			AddResource(b.Info.Beat+"_metrics.json",
+			//
+			AddResource(b.Info.Beat+"/metrics.json",
 				"Global beat metrics",
 				"Global metrics for all beats",
 				"application/json",
 				func() string { return string(getBeatMetrics()) }).
-			AddResource(b.Info.Beat+"_global_processors.txt",
+			//
+			AddResource(b.Info.Beat+"/global_processors.txt",
 				"Global beat processors",
 				"The list of currently configured global beat processors",
 				"text/plain",
 				func() string {
 					return string(b.agentDiagnosticHook())
-				})
+				}).
+			//
+			AddTool(b.Info.Beat+"-test-output",
+				"Test "+b.Info.Beat+" output",
+				"Test "+b.Info.Beat+" can connect to the output by using the current settings",
+				testOutput)
 	}
 
 	// Do not load seccomp for osquerybeat, it was disabled before V2 in the configuration file

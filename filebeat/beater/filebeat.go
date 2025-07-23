@@ -21,6 +21,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -48,6 +49,7 @@ import (
 	conf "github.com/elastic/elastic-agent-libs/config"
 	"github.com/elastic/elastic-agent-libs/logp"
 	"github.com/elastic/elastic-agent-libs/monitoring"
+	"github.com/elastic/elastic-agent-libs/paths"
 	"github.com/elastic/go-concert/unison"
 
 	// Add filebeat level processors
@@ -149,22 +151,36 @@ func newBeater(b *beat.Beat, plugins PluginFactory, rawConfig *conf.C) (beat.Bea
 			gzipRegistry(b.Info.Logger))
 	}
 	if b.MCP != nil {
-		log, meta := getRegistryFiles()
-		b.MCP.AddResource("input_metrics",
-			"Filebeat input metrics",
-			"Current metrics for all Filebeat active inputs",
-			"application/json",
-			func() string { return string(getMetrics()) }).
-			AddResource("registry/log.json",
+		getRegistryFile := func(file string) []byte {
+			path := filepath.Join(
+				paths.Resolve(paths.Data, ""), "registry", "filebeat", file)
+
+			data, err := os.ReadFile(path)
+			if err != nil {
+				data = []byte(fmt.Sprintf("cannot read registry %s: %v",
+					filepath.Base(path),
+					err))
+			}
+
+			return data
+		}
+
+		b.MCP.
+			AddResource(b.Info.Beat+"/input_metrics",
+				"Filebeat input metrics",
+				"Current metrics for all Filebeat active inputs",
+				"application/json",
+				func() string { return string(getMetrics()) }).
+			AddResource(b.Info.Beat+"/registry/log.json",
 				"Filebeat registry entries",
 				"Filebeat's registry containing entries for all files being ingested, their current offset and EOF flag for GZIP files. It's intended for debugging and troubleshooting filebeat to check what is the files it's ingesting and what is the current offset for each file.",
-				"application/json",
-				func() string { return string(log) }).
-			AddResource("registry/meta.json",
+				"application/json-sec",
+				func() string { return string(getRegistryFile("log.json")) }).
+			AddResource(b.Info.Beat+"/registry/meta.json",
 				"Filebeat registry metadata",
-				"Filebeat's registry metadata containing the current version of the registry.",
+				"Filebeat filestream's registry metadata containing the current version of the registry.",
 				"application/json",
-				func() string { return string(meta) })
+				func() string { return string(getRegistryFile("meta.json")) })
 	}
 
 	// Add inputs created by the modules
