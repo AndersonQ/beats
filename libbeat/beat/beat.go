@@ -22,6 +22,7 @@ import (
 	"github.com/elastic/beats/v7/libbeat/common/reload"
 	"github.com/elastic/beats/v7/libbeat/instrumentation"
 	"github.com/elastic/beats/v7/libbeat/management"
+	"github.com/elastic/beats/v7/libbeat/mcp"
 	"github.com/elastic/beats/v7/libbeat/version"
 	"github.com/elastic/elastic-agent-client/v7/pkg/proto"
 	"github.com/elastic/elastic-agent-libs/config"
@@ -87,6 +88,7 @@ type Beat struct {
 	Instrumentation instrumentation.Instrumentation // instrumentation holds an APM agent for capturing and reporting traces
 
 	API      *api.Server      // API server. This is nil unless the http endpoint is enabled.
+	MCP      *mcp.Server      // MCP server. This is nil unless the MCP server is enabled.
 	Registry *reload.Registry // input, & output registry for configuration manager, should be instantiated in NewBeat
 }
 

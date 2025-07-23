@@ -38,6 +38,7 @@ func GenExportConfigCmd(settings instance.Settings) *cobra.Command {
 	}
 }
 
+// AndersonQ: here config
 func exportConfig(settings instance.Settings) error {
 	settings.DisableConfigResolver = true
 	b, err := instance.NewInitializedBeat(settings)

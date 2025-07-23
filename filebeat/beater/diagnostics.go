@@ -70,6 +70,29 @@ func getRegexpsForRegistryFiles() ([]*regexp.Regexp, error) {
 	return registryFileRegExps, nil
 }
 
+func getRegistryFiles() ([]byte, []byte) {
+	regDir := filepath.Join(
+		paths.Resolve(paths.Data, ""), "registry", "filebeat")
+	logPath := filepath.Join(regDir, "log.json")
+	metaPath := filepath.Join(regDir, "meta.json")
+
+	log, err := os.ReadFile(logPath)
+	if err != nil {
+		log = []byte(fmt.Sprintf("cannot read registry %s: %v",
+			filepath.Base(logPath),
+			err))
+	}
+
+	meta, err := os.ReadFile(metaPath)
+	if err != nil {
+		log = []byte(fmt.Sprintf("cannot read registry %s: %v",
+			filepath.Base(metaPath),
+			err))
+	}
+
+	return log, meta
+}
+
 func gzipRegistry(logger *logp.Logger) func() []byte {
 	logger = logger.Named("diagnostics")
 

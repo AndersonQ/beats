@@ -241,6 +241,7 @@ func (cm *BeatV2Manager) AgentInfo() client.AgentInfo {
 }
 
 // RegisterDiagnosticHook will register a diagnostic callback function when elastic-agent asks for a diagnostics dump
+// AndersonQ: diag hooks
 func (cm *BeatV2Manager) RegisterDiagnosticHook(name string, description string, filename string, contentType string, hook client.DiagnosticHook) {
 	cm.client.RegisterDiagnosticHook(name, description, filename, contentType, hook)
 }

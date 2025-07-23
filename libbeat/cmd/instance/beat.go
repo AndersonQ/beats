@@ -36,6 +36,7 @@ import (
 
 	"github.com/gofrs/uuid/v5"
 	"go.uber.org/zap"
+	"gopkg.in/yaml.v2"
 
 	"github.com/elastic/beats/v7/libbeat/api"
 	"github.com/elastic/beats/v7/libbeat/asset"
@@ -55,6 +56,7 @@ import (
 	"github.com/elastic/beats/v7/libbeat/instrumentation"
 	"github.com/elastic/beats/v7/libbeat/kibana"
 	"github.com/elastic/beats/v7/libbeat/management"
+	"github.com/elastic/beats/v7/libbeat/mcp"
 	"github.com/elastic/beats/v7/libbeat/monitoring/report"
 	"github.com/elastic/beats/v7/libbeat/monitoring/report/log"
 	"github.com/elastic/beats/v7/libbeat/outputs"
@@ -126,6 +128,8 @@ type beatConfig struct {
 	MetricLogging   *config.C              `config:"logging.metrics"`
 	Keystore        *config.C              `config:"keystore"`
 	Instrumentation instrumentation.Config `config:"instrumentation"`
+
+	MCP *mcp.Config `config:"mcp"`
 
 	// output/publishing related configurations
 	Pipeline pipeline.Config `config:",inline"`
@@ -461,6 +465,91 @@ func (b *Beat) launch(settings Settings, bt beat.Creator) error {
 				return fmt.Errorf("failed to attach http handlers for pprof: %w", err)
 			}
 		}
+	}
+
+	// Start MCP server if configured
+	if b.Config.MCP.Enabled {
+		b.MCP = mcp.New(b.Beat.Info.Beat, b.Config.MCP, b.Info.Logger)
+		b.Info.Logger.Info("AndersonQ: created MCP server")
+
+		getBeatMetrics := func() []byte {
+			m := monitoring.CollectStructSnapshot(
+				b.Monitoring.StatsRegistry(), monitoring.Full, true)
+			data, err := json.Marshal(m)
+			if err != nil {
+				logger.Warnw("Failed to collect beat metric snapshot for Agent diagnostics.", "error", err)
+				return []byte(err.Error())
+			}
+			return data
+		}
+
+		getConfig := func() string {
+			var config map[string]interface{}
+			err := b.RawConfig.Unpack(&config)
+			if err != nil {
+				return fmt.Sprintf("Error unpacking config: %+v.", err)
+			}
+			res, err := yaml.Marshal(config)
+			if err != nil {
+				return fmt.Sprintf("Error converting config to YAML format: %+v.", err)
+			}
+
+			return string(res)
+		}
+		getModules := func() string {
+			glob, err := b.Beat.BeatConfig.String("config.modules.path", -1)
+			if err != nil {
+				return fmt.Sprintf("Could not find config 'config.modules.path': %+v.", err)
+			}
+
+			if !strings.HasSuffix(glob, "*.yml") {
+				return fmt.Sprintf("wrong settings for config.modules.path, it is expected to end with *.yml. Got: %s", glob)
+			}
+
+			modulesManager, err := cfgfile.NewGlobManager(glob, ".yml", ".disabled", b.Info.Logger)
+			if err != nil {
+				return fmt.Sprintf("could not create cfgfile.NewGlobManager: %v", err)
+			}
+
+			buff := strings.Builder{}
+			buff.WriteString("Enabled:")
+			for _, module := range modulesManager.ListEnabled() {
+				buff.WriteString("\n" + module.Name)
+			}
+
+			buff.WriteString("\n\nDisabled:")
+			for _, module := range modulesManager.ListDisabled() {
+				buff.WriteString("\n" + module.Name)
+			}
+			return buff.String()
+		}
+		b.Config.Path.Logs
+
+		b.MCP.
+			AddResource(
+				b.Info.Beat+"_config.json",
+				b.Info.Beat+" configuration",
+				"Configuration for "+b.Info.Beat,
+				"application/yaml",
+				func() string { return getConfig() }).
+			AddResource(
+				b.Info.Beat+"_modules.txt",
+				b.Info.Beat+" modules",
+				"List enabled and disabled modules for "+b.Info.Beat,
+				"text/plain",
+				func() string { return getModules() }).
+			AddResource(b.Info.Beat+"_metrics.json",
+				"Global beat metrics",
+				"Global metrics for all beats",
+				"application/json",
+				func() string { return string(getBeatMetrics()) }).
+			AddResource(b.Info.Beat+"_global_processors.txt",
+				"Global beat processors",
+				"The list of currently configured global beat processors",
+				"text/plain",
+				func() string {
+					return string(b.agentDiagnosticHook())
+				})
 	}
 
 	// Do not load seccomp for osquerybeat, it was disabled before V2 in the configuration file

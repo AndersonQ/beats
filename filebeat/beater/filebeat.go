@@ -129,16 +129,17 @@ func newBeater(b *beat.Beat, plugins PluginFactory, rawConfig *conf.C) (beat.Bea
 		}
 	}
 
+	getMetrics := func() []byte {
+		data, err := inputmon.MetricSnapshotJSON(b.Monitoring.InputsRegistry())
+		if err != nil {
+			b.Info.Logger.Warnw("Failed to collect input metric snapshot for Agent diagnostics.", "error", err)
+			return []byte(err.Error())
+		}
+		return data
+	}
 	if b.Manager != nil {
 		b.Manager.RegisterDiagnosticHook("input_metrics", "Metrics from active inputs.",
-			"input_metrics.json", "application/json", func() []byte {
-				data, err := inputmon.MetricSnapshotJSON(b.Monitoring.InputsRegistry())
-				if err != nil {
-					b.Info.Logger.Warnw("Failed to collect input metric snapshot for Agent diagnostics.", "error", err)
-					return []byte(err.Error())
-				}
-				return data
-			})
+			"input_metrics.json", "application/json", getMetrics)
 
 		b.Manager.RegisterDiagnosticHook(
 			"registry",
@@ -146,6 +147,24 @@ func newBeater(b *beat.Beat, plugins PluginFactory, rawConfig *conf.C) (beat.Bea
 			"registry.tar.gz",
 			"application/octet-stream",
 			gzipRegistry(b.Info.Logger))
+	}
+	if b.MCP != nil {
+		log, meta := getRegistryFiles()
+		b.MCP.AddResource("input_metrics",
+			"Filebeat input metrics",
+			"Current metrics for all Filebeat active inputs",
+			"application/json",
+			func() string { return string(getMetrics()) }).
+			AddResource("registry/log.json",
+				"Filebeat registry entries",
+				"Filebeat's registry containing entries for all files being ingested, their current offset and EOF flag for GZIP files. It's intended for debugging and troubleshooting filebeat to check what is the files it's ingesting and what is the current offset for each file.",
+				"application/json",
+				func() string { return string(log) }).
+			AddResource("registry/meta.json",
+				"Filebeat registry metadata",
+				"Filebeat's registry metadata containing the current version of the registry.",
+				"application/json",
+				func() string { return string(meta) })
 	}
 
 	// Add inputs created by the modules

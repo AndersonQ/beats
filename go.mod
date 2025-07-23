@@ -132,7 +132,7 @@ require (
 	golang.org/x/sys v0.33.0
 	golang.org/x/text v0.26.0
 	golang.org/x/time v0.11.0
-	golang.org/x/tools v0.33.0
+	golang.org/x/tools v0.34.0
 	google.golang.org/api v0.230.0
 	google.golang.org/genproto v0.0.0-20241118233622-e639e219e697 // indirect
 	google.golang.org/grpc v1.73.0
@@ -241,7 +241,10 @@ require (
 	gopkg.in/yaml.v3 v3.0.1
 )
 
-require go.opentelemetry.io/otel/sdk/metric v1.36.0
+require (
+	github.com/modelcontextprotocol/go-sdk v0.2.0
+	go.opentelemetry.io/otel/sdk/metric v1.36.0
+)
 
 require (
 	aqwari.net/xml v0.0.0-20210331023308-d9421b293817 // indirect
@@ -412,6 +415,7 @@ require (
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/xdg-go/pbkdf2 v1.0.0 // indirect
 	github.com/xdg-go/stringprep v1.0.4 // indirect
+	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
 	github.com/youmark/pkcs8 v0.0.0-20240726163527-a2c0da244d78 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	github.com/zeebo/errs v1.4.0 // indirect
