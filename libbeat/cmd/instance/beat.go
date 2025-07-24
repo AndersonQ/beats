@@ -496,7 +496,12 @@ func (b *Beat) launch(settings Settings, bt beat.Creator) error {
 				return fmt.Sprintf("Error converting config to YAML format: %+v.", err)
 			}
 
-			return string(res)
+			return fmt.Sprintf("config path: %s\n"+
+				"config:\n"+
+				"```yaml\n"+
+				"%s\n"+
+				"```", paths.Paths.Config, res)
+
 		}
 		getModules := func() string {
 			glob, err := b.Beat.BeatConfig.String("config.modules.path", -1)
@@ -572,6 +577,7 @@ func (b *Beat) launch(settings Settings, bt beat.Creator) error {
 			}
 
 			buff := strings.Builder{}
+			buff.WriteString("config file path: " + paths.Paths.Config + "\n\n")
 			for _, client := range output.Clients {
 				tClient, ok := client.(testing.Testable)
 				if !ok {

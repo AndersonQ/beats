@@ -2,6 +2,7 @@ package mcp
 
 import (
 	"context"
+	_ "embed"
 	"errors"
 	"fmt"
 	"net/http"
@@ -11,6 +12,9 @@ import (
 
 	"github.com/elastic/elastic-agent-libs/logp"
 )
+
+//go:embed prompts/health_check_assistant.md
+var promptHealthCheckAssistant string
 
 const uriScheme = "beats://"
 
@@ -24,12 +28,12 @@ type Server struct {
 	log *logp.Logger
 }
 
-func New(name string, config *Config, logger *logp.Logger) *Server {
+func New(beat string, config *Config, logger *logp.Logger) *Server {
 	log := logger.Named("mcp").With("anderson", "AndersonQ")
 	server := mcp.NewServer(
 		&mcp.Implementation{
-			Name:    name + "-mcp",
-			Title:   name + "'s MCP server",
+			Name:    beat + "-mcp",
+			Title:   beat + "'s MCP server",
 			Version: "v0.0.1"},
 		nil)
 
@@ -54,6 +58,32 @@ func New(name string, config *Config, logger *logp.Logger) *Server {
 		}
 	}()
 	log.Infof("AndersonQ: MCP server running on %s", httpServer.Addr)
+
+	prompt := mcp.Prompt{
+		Name:        "ingest_files_ok",
+		Title:       "Filebeat file ingestion",
+		Description: "Check if filebeat is ingesting files",
+		Arguments:   nil,
+	}
+	server.AddPrompt(&prompt,
+		func(ctx context.Context,
+			session *mcp.ServerSession, params *mcp.GetPromptParams) (*mcp.GetPromptResult, error) {
+			return &mcp.GetPromptResult{
+				Description: "Is filebeat running ",
+				Messages: []*mcp.PromptMessage{
+					{
+						Role: "user",
+						Content: &mcp.TextContent{
+							Text: "is everything ok with " + beat + "?"},
+					}, {
+						Role: "assistant",
+						Content: &mcp.TextContent{
+							Text: promptHealthCheckAssistant},
+					},
+				},
+			}, nil
+
+		})
 
 	return &Server{
 		s:   server,
@@ -127,8 +157,13 @@ func (s Server) AddTool(
 	s.log.Infof("added tool %s", name)
 }
 
+func logResourceURI(beat string) string {
+	return uriScheme + beat + "/logs"
+}
+
+// TODO(AnderonQ): add a paramter for a time window for the logs
 func (s Server) AddResourceLogFiles(beat string, getFiles func() ([]string, error)) Server {
-	uri := uriScheme + beat + "/logs"
+	uri := logResourceURI(beat)
 
 	rHandler := func(ctx context.Context, session *mcp.ServerSession, params *mcp.ReadResourceParams) (*mcp.ReadResourceResult, error) {
 		var contents []*mcp.ResourceContents

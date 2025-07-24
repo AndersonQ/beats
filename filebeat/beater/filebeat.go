@@ -166,7 +166,7 @@ func newBeater(b *beat.Beat, plugins PluginFactory, rawConfig *conf.C) (beat.Bea
 		}
 
 		b.MCP.
-			AddResource(b.Info.Beat+"/input_metrics",
+			AddResource(b.Info.Beat+"/input_metrics.json",
 				"Filebeat input metrics",
 				"Current metrics for all Filebeat active inputs",
 				"application/json",
