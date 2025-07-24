@@ -592,6 +592,7 @@ func (b *Beat) launch(settings Settings, bt beat.Creator) error {
 
 			return buff.String(), false
 		}
+
 		b.MCP.
 			AddResourceLogFiles(b.Info.Beat, getLogsFiles).
 			//
@@ -607,13 +608,13 @@ func (b *Beat) launch(settings Settings, bt beat.Creator) error {
 				"text/plain",
 				func() string { return getModules() }).
 			//
-			AddResource(b.Info.Beat+"/metrics.json",
+			AddResource(b.Info.Beat+"/global-metrics.json",
 				"Global beat metrics",
 				"Global metrics for all beats",
 				"application/json",
 				func() string { return string(getBeatMetrics()) }).
 			//
-			AddResource(b.Info.Beat+"/global_processors.txt",
+			AddResource(b.Info.Beat+"/global-processors.txt",
 				"Global beat processors",
 				"The list of currently configured global beat processors",
 				"text/plain",
@@ -624,7 +625,9 @@ func (b *Beat) launch(settings Settings, bt beat.Creator) error {
 			AddTool(b.Info.Beat+"-test-output",
 				"Test "+b.Info.Beat+" output",
 				"Test "+b.Info.Beat+" can connect to the output by using the current settings",
-				testOutput)
+				testOutput).
+			//
+			AddToolLogsByDay(b.Info.Beat, getLogsFiles)
 	}
 
 	// Do not load seccomp for osquerybeat, it was disabled before V2 in the configuration file

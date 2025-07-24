@@ -22,9 +22,11 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"unicode"
+
+	"github.com/stretchr/testify/assert"
 
 	agentlibstesting "github.com/elastic/elastic-agent-libs/testing"
-	"github.com/stretchr/testify/assert"
 )
 
 var _ agentlibstesting.Driver = (*PlainTextDriver)(nil)
@@ -33,12 +35,13 @@ func TestPlainTextDriver(t *testing.T) {
 	var buf bytes.Buffer
 	driver := NewPlainTextDriver(&buf)
 
-	driver.Run("test suite", func(d Driver) {
+	driver.Run("test suite", func(d agentlibstesting.Driver) {
 		d.Info("field1", "value1")
 		d.Warn("field2", "reason2")
 		d.Error("field3", errors.New("error3"))
-		d.Error("field4", nil)
-		d.Run("sub-test", func(d Driver) {
+		d.Fatal("field4", errors.New("error4"))
+		d.Error("field5", nil)
+		d.Run("sub-test", func(d agentlibstesting.Driver) {
 			d.Info("sub-field1", "sub-value1")
 			d.Result("some result data")
 		})
@@ -48,12 +51,12 @@ func TestPlainTextDriver(t *testing.T) {
   field1: value1
   field2... WARN reason2
   field3... ERROR error3
-  field4... OK
+  field4... ERROR error4
+  field5... OK
   sub-test...
     sub-field1: sub-value1
     result:
       some result data
-
 `
 
 	// The output contains extra newlines between some of the calls, so we'll
@@ -61,18 +64,19 @@ func TestPlainTextDriver(t *testing.T) {
 	gotLinesRaw := strings.Split(buf.String(), "\n")
 	var gotLines []string
 	for _, l := range gotLinesRaw {
-		if strings.TrimSpace(l) != "" {
-			gotLines = append(gotLines, l)
+		if ll := strings.TrimRightFunc(l, unicode.IsSpace); ll != "" {
+			gotLines = append(gotLines, ll)
 		}
 	}
 
 	expectedLinesRaw := strings.Split(expected, "\n")
 	var expectedLines []string
 	for _, l := range expectedLinesRaw {
-		if strings.TrimSpace(l) != "" {
-			expectedLines = append(expectedLines, l)
+		if ll := strings.TrimRightFunc(l, unicode.IsSpace); ll != "" {
+			expectedLines = append(expectedLines, ll)
 		}
 	}
 
-	assert.Equal(t, expectedLines, gotLines, "The output from the PlainTextDriver does not match the expected output")
+	assert.Equal(t, expectedLines, gotLines,
+		"The output from the PlainTextDriver does not match the expected output")
 }

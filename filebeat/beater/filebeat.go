@@ -171,11 +171,13 @@ func newBeater(b *beat.Beat, plugins PluginFactory, rawConfig *conf.C) (beat.Bea
 				"Current metrics for all Filebeat active inputs",
 				"application/json",
 				func() string { return string(getMetrics()) }).
+			//
 			AddResource(b.Info.Beat+"/registry/log.json",
 				"Filebeat registry entries",
 				"Filebeat's registry containing entries for all files being ingested, their current offset and EOF flag for GZIP files. It's intended for debugging and troubleshooting filebeat to check what is the files it's ingesting and what is the current offset for each file.",
 				"application/json-sec",
 				func() string { return string(getRegistryFile("log.json")) }).
+			//
 			AddResource(b.Info.Beat+"/registry/meta.json",
 				"Filebeat registry metadata",
 				"Filebeat filestream's registry metadata containing the current version of the registry.",
