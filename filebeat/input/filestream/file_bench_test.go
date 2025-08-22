@@ -63,7 +63,7 @@ func TestBenchmark_64gb(t *testing.T) {
 	linesPerFile := 42500 * 6400 // 42500 lines ~= 10MB => 64GB total
 	// keep the file in case it gets killed, so we have an idea of how far it got
 	dir := filepath.Join("testdata", "benchmark", "64gb")
-	plain, _ := generateRandomJSONLogs(t, dir, linesPerFile)
+	plain, gz := generateRandomJSONLogs(t, dir, linesPerFile)
 
 	// take heap profile at 90%
 	heapProfile := 244800000
@@ -73,20 +73,20 @@ func TestBenchmark_64gb(t *testing.T) {
 			runner(t, plain, linesPerFile, heapProfile)
 		},
 	)
-	// t.Run("gzip",
-	// 	func(t *testing.T) {
-	// 		runner(t, gz, linesPerFile, heapProfile)
-	// 	},
-	// )
+	t.Run("gzip",
+		func(t *testing.T) {
+			runner(t, gz, linesPerFile, heapProfile)
+		},
+	)
 }
 
-func runner(t *testing.T, filepath string, totalLines, lineMenHeap int) {
+func runner(t *testing.T, name, filepath string, totalLines, lineMenHeap int) {
 	logger := logp.NewNopLogger()
 	inp := filestream{
-		// gzipExperimental: true,
-		encodingFactory: encoding.Plain,
-		readerConfig:    defaultReaderConfig(),
-		closerConfig:    defaultCloserConfig(),
+		gzipExperimental: true,
+		encodingFactory:  encoding.Plain,
+		readerConfig:     defaultReaderConfig(),
+		closerConfig:     defaultCloserConfig(),
 	}
 	inp.closerConfig.OnStateChange.Inactive = 24 * time.Hour
 	inp.closerConfig.Reader.OnEOF = true
@@ -111,17 +111,17 @@ func runner(t *testing.T, filepath string, totalLines, lineMenHeap int) {
 	require.NoError(t, err, "filestream could not open log file")
 
 	// ========================= Setup CPU profile
-	cpuf, err := os.Create(filepath + ".cpu.prof")
+	cpuf, err := os.Create(filepath + "." + name + ".cpu.pprof")
 	require.NoError(t, err, "could not create CPU profile file")
 	defer cpuf.Close()
 
 	// ========================== Setup memory heap profile
-	heapf, err := os.Create(filepath + ".men.prof")
+	heapf, err := os.Create(filepath + "." + name + ".mem.pprof")
 	require.NoError(t, err, "could not create heap profile file")
 	defer heapf.Close()
 
 	// ========================== Setup memory monitoring
-	memf, err := os.Create(filepath + ".mem.stats")
+	memf, err := os.Create(filepath + "." + name + ".mem.stats")
 	require.NoError(t, err, "could not create memory stats file")
 
 	type memUsage struct {
@@ -145,8 +145,11 @@ func runner(t *testing.T, filepath string, totalLines, lineMenHeap int) {
 				mu.Alloc = m.Alloc
 				mu.TotalAlloc = m.TotalAlloc
 				_, _ = fmt.Fprintf(memf,
-					`{"timestamp":"%s","alloc":%d,"total_alloc":%d}\n`,
-					mu.Timestamp, mu.Alloc, mu.TotalAlloc)
+					`{"timestamp":"%s","alloc":%d,"total_alloc":%d,"bench":"%s"}`+"\n",
+					mu.Timestamp.Format(time.RFC3339Nano),
+					mu.Alloc,
+					mu.TotalAlloc,
+					name)
 			case <-menStatsCh:
 				t.Log("memory stats collection stopped")
 				return
