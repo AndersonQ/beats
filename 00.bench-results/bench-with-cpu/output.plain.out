@@ -1,0 +1,11 @@
+❯ go test -v -run TestBenchmark_64gb/plain -memprofile plain.mem.out -timeout=0
+=== RUN   TestBenchmark_64gb
+=== RUN   TestBenchmark_64gb/plain
+    file_bench_test.go:141: memory stats collection started every 500ms
+    file_bench_test.go:167: reached lineMenHeap: 244800000/272000000 lines, taking heap profile
+    file_bench_test.go:154: memory stats collection stopped
+--- PASS: TestBenchmark_64gb (254.97s)
+    --- PASS: TestBenchmark_64gb/plain (254.97s)
+PASS
+ok      github.com/elastic/beats/v7/filebeat/input/filestream   256.041s
+

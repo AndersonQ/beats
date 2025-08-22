@@ -1,0 +1,11 @@
+❯ go test -v -run TestBenchmark_64gb/gzip -memprofile gzip.mem.out -timeout=0
+=== RUN   TestBenchmark_64gb
+=== RUN   TestBenchmark_64gb/gzip
+    file_bench_test.go:141: memory stats collection started every 500ms
+    file_bench_test.go:167: reached lineMenHeap: 244800000/272000000 lines, taking heap profile
+    file_bench_test.go:154: memory stats collection stopped
+--- PASS: TestBenchmark_64gb (334.15s)
+    --- PASS: TestBenchmark_64gb/gzip (334.15s)
+PASS
+ok      github.com/elastic/beats/v7/filebeat/input/filestream   334.656s
+

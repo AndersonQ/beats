@@ -1,0 +1,21 @@
+ ~/devel/github.com/elastic/beats/filebeat/input/filestream   44867-gzip-benchmark ?1  13:16:19                                                                   2.113s ainsoph@mac 
+❯ go test -v -run TestBenchmark_64gb -timeout=0
+=== RUN   TestBenchmark_64gb
+    file_bench_test.go:239: closing gzip writer
+    file_bench_test.go:232: closing gzip file
+    file_bench_test.go:223: closing plain file
+=== RUN   TestBenchmark_64gb/plain
+    file_bench_test.go:138: memory stats collection started every 500ms
+    file_bench_test.go:167: reached lineMenHeap: 244800000/272000000 lines, taking heap profile
+    file_bench_test.go:154: memory stats collection stopped
+=== RUN   TestBenchmark_64gb/gzip
+    file_bench_test.go:138: memory stats collection started every 500ms
+    file_bench_test.go:167: reached lineMenHeap: 244800000/272000000 lines, taking heap profile
+    file_bench_test.go:154: memory stats collection stopped
+--- PASS: TestBenchmark_64gb (1130.28s)
+    --- PASS: TestBenchmark_64gb/plain (251.57s)
+    --- PASS: TestBenchmark_64gb/gzip (329.39s)
+PASS
+ok      github.com/elastic/beats/v7/filebeat/input/filestream   1131.294s
+ ~/devel/github.com/elastic/beats/filebeat/input/filestream   44867-gzip-benchmark ?2  13:35:17                                                                                                                                                                                                                                                                  18m 55s ainsoph@mac  ~/devel/github.com/elastic/beats/filebeat/input/filestream   44867-gzip-benchmark ?2  13:35:17                                                                   18m 55s ainsoph@mac 
+
