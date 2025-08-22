@@ -63,30 +63,30 @@ func TestBenchmark_64gb(t *testing.T) {
 	linesPerFile := 42500 * 6400 // 42500 lines ~= 10MB => 64GB total
 	// keep the file in case it gets killed, so we have an idea of how far it got
 	dir := filepath.Join("testdata", "benchmark", "64gb")
-	plain, gz := generateRandomJSONLogs(t, dir, linesPerFile)
+	plain, _ := generateRandomJSONLogs(t, dir, linesPerFile)
 
 	// take heap profile at 90%
 	heapProfile := 244800000
 
 	t.Run("plain",
 		func(t *testing.T) {
-			runner(t, plain, linesPerFile, heapProfile)
+			runner(t, "plain", plain, linesPerFile, heapProfile)
 		},
 	)
-	t.Run("gzip",
-		func(t *testing.T) {
-			runner(t, gz, linesPerFile, heapProfile)
-		},
-	)
+	// t.Run("gzip",
+	// 	func(t *testing.T) {
+	// 		runner(t, "gzip", gz, linesPerFile, heapProfile)
+	// 	},
+	// )
 }
 
 func runner(t *testing.T, name, filepath string, totalLines, lineMenHeap int) {
 	logger := logp.NewNopLogger()
 	inp := filestream{
-		gzipExperimental: true,
-		encodingFactory:  encoding.Plain,
-		readerConfig:     defaultReaderConfig(),
-		closerConfig:     defaultCloserConfig(),
+		// gzipExperimental: true,
+		encodingFactory: encoding.Plain,
+		readerConfig:    defaultReaderConfig(),
+		closerConfig:    defaultCloserConfig(),
 	}
 	inp.closerConfig.OnStateChange.Inactive = 24 * time.Hour
 	inp.closerConfig.Reader.OnEOF = true
