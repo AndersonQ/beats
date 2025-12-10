@@ -1145,6 +1145,77 @@ logging.level: debug
 	)
 }
 
+// TestFilestreamGZIPWithPathIdentity verifies that filestream can ingest both
+// a plain text file and a gzip file when not using file_identity.fingerprint
+// configuration.
+func TestFilestreamGZIPWithPathIdentity(t *testing.T) {
+	sufix := "===================================================================================================="
+	lines := make([]string, 0, 510)
+	// Create plain file content (10 lines)
+	var dataPlain []byte
+	for i := range 10 {
+		l := fmt.Sprintf("plain file line %d %s", i, sufix)
+		lines = append(lines, l)
+		dataPlain = append(dataPlain, []byte(l+"\n")...)
+	}
+
+	// Create gzip file content (10 lines)
+	var dataGzipPlain []byte
+	for i := range 500 {
+		l := fmt.Sprintf("gzip file line %d %s%s", i, sufix, sufix)
+		lines = append(lines, l)
+		dataGzipPlain = append(dataGzipPlain, []byte(l+"\n")...)
+	}
+	dataGZ := gziptest.Compress(t, dataGzipPlain, gziptest.CorruptNone)
+	if len(dataGZ) < 1024 {
+		t.Fatalf("not enought gzip data, only %d", len(dataGZ))
+	}
+	filebeat := integration.NewBeat(
+		t,
+		"filebeat",
+		"../../filebeat.test",
+	)
+	tempDir := filebeat.TempDir()
+	logPathPlain := filepath.Join(tempDir, "plain.log")
+	logPathGZ := filepath.Join(tempDir, "gzip.log.gz")
+
+	err := os.WriteFile(logPathPlain, dataPlain, 0644)
+	require.NoError(t, err, "could not write plain file to disk")
+	err = os.WriteFile(logPathGZ, dataGZ, 0644)
+	require.NoError(t, err, "could not write gzip file to disk")
+
+	cfg := fmt.Sprintf(`
+filebeat.inputs:
+  - type: filestream
+    id: "test-filestream-path-identity"
+    paths:
+      - %s
+    file_identity.native: ~
+output.file:
+  path: ${path.home}
+  filename: "output"
+  rotate_on_startup: false
+logging.level: debug
+`, filepath.Join(tempDir, "*.log*"))
+
+	filebeat.WriteConfigFile(cfg)
+	filebeat.Start()
+
+	filebeat.WaitLogsContainsAnyOrder(
+		[]string{
+			fmt.Sprintf("End of file reached: %s; Backoff now.", logPathPlain),
+			fmt.Sprintf("EOF has been reached. Closing. Path='%s'", logPathGZ)},
+		30*time.Second,
+		"Filebeat did not reach EOF for gzip file. Did not find log [%s]",
+	)
+
+	filebeat.Stop()
+
+	filebeat.WaitPublishedEvents(time.Second, 510)
+	matchPublishedLinesFromFile(t,
+		filepath.Join(tempDir, "output"), lines)
+}
+
 func getOutputFilesSorted(t *testing.T, outputFilePattern string, tempDir string) []string {
 	globPattern := outputFilePattern + "-*.ndjson"
 	files, err := filepath.Glob(filepath.Join(tempDir, globPattern))

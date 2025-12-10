@@ -87,7 +87,8 @@ Reading GZIP files requires the [`file_identity`](#filebeat-input-filestream-fil
 to be [`fingerprint`](#filebeat-input-filestream-file-identity-fingerprint), which is the default behaviour. The fingerprinting
 is done on the decompressed data, and log rotation is handled automatically.
 
-To disable GZIP support, set `gzip_disabled` to `true`.
+If you need to use a file identity other than `fingerprint`, you should exclude
+GZIP files from ingestion using `exclude_files`:
 
 ```yaml
 filebeat.inputs:
@@ -95,7 +96,8 @@ filebeat.inputs:
     id: "test-filestream"
     paths:
       - /var/some-app/app.log*
-    gzip_disabled: true
+    file_identity.native: ~
+    prospector.scanner.exclude_files: ['\.gz$']
 ```
 
 ::::{important}

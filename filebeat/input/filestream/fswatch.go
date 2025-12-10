@@ -89,14 +89,12 @@ func newFileWatcher(
 	logger *logp.Logger,
 	paths []string,
 	config fileWatcherConfig,
-	gzipAllowed bool,
 	sendNotChanged bool,
 	fi fileIdentifier,
-	srci *loginp.SourceIdentifier,
-) (*fileWatcher, error) {
+	srci *loginp.SourceIdentifier) (*fileWatcher, error) {
 
 	config.SendNotChanged = sendNotChanged
-	scanner, err := newFileScanner(logger, paths, config.Scanner, gzipAllowed)
+	scanner, err := newFileScanner(logger, paths, config.Scanner)
 	if err != nil {
 		return nil, err
 	}
@@ -396,21 +394,19 @@ func defaultFileScannerConfig() fileScannerConfig {
 // fileScanner looks for files which match the patterns in paths.
 // It is able to exclude files and symlinks.
 type fileScanner struct {
-	paths       []string
-	cfg         fileScannerConfig
-	log         *logp.Logger
-	hasher      hash.Hash
-	readBuffer  []byte
-	gzipAllowed bool
+	paths      []string
+	cfg        fileScannerConfig
+	log        *logp.Logger
+	hasher     hash.Hash
+	readBuffer []byte
 }
 
-func newFileScanner(logger *logp.Logger, paths []string, config fileScannerConfig, gzipAllowed bool) (*fileScanner, error) {
+func newFileScanner(logger *logp.Logger, paths []string, config fileScannerConfig) (*fileScanner, error) {
 	s := fileScanner{
-		paths:       paths,
-		cfg:         config,
-		log:         logger.Named(scannerDebugKey),
-		hasher:      sha256.New(),
-		gzipAllowed: gzipAllowed,
+		paths:  paths,
+		cfg:    config,
+		log:    logger.Named(scannerDebugKey),
+		hasher: sha256.New(),
 	}
 
 	if s.cfg.Fingerprint.Enabled {
@@ -620,12 +616,10 @@ func (s *fileScanner) toFileDescriptor(it *ingestTarget) (fd loginp.FileDescript
 	}
 	defer osFile.Close()
 
-	if s.gzipAllowed {
-		fd.GZIP, err = IsGZIP(osFile)
-		if err != nil {
-			return fd, fmt.Errorf("failed to check if %q is gzip: %w",
-				it.originalFilename, err)
-		}
+	fd.GZIP, err = IsGZIP(osFile)
+	if err != nil {
+		return fd, fmt.Errorf("failed to check if %q is gzip: %w",
+			it.originalFilename, err)
 	}
 
 	// Check there is enough data

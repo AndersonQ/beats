@@ -103,7 +103,6 @@ processors:
             - %s
           prospector.scanner.fingerprint.enabled: false
           file_identity.native: ~
-          gzip_disabled: true
     processors:
       - add_host_metadata: ~
       - add_fields:
@@ -206,7 +205,6 @@ func TestLogstashExporterProxyURL(t *testing.T) {
             - %s
           prospector.scanner.fingerprint.enabled: false
           file_identity.native: ~
-          gzip_disabled: true
     processors:
       - add_host_metadata: ~
       - add_fields:

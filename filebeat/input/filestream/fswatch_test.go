@@ -906,6 +906,14 @@ scanner:
 						name: excludedBasename,
 					}),
 				},
+				normalGZIPFilename: {
+					Filename:    normalGZIPFilename,
+					Fingerprint: "4e52b0a8d918b923a15f50e49b43cd4f99cf19eb581bd84dcc2f0b288e55da04",
+					Info: file.ExtendFileInfo(&testFileInfo{
+						size: sizes[normalGZIPFilename],
+						name: normalGZIPBasename,
+					}),
+				},
 				excludedIncludedFilename: {
 					Filename:    excludedIncludedFilename,
 					Fingerprint: "7985b2b9750bdd3c76903db408aff3859204d6334279eaf516ecaeb618a218d5",
@@ -929,7 +937,7 @@ scanner:
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			logger := logptest.NewTestingLogger(t, "")
-			s := createScannerWithConfig(t, logger, paths, tc.cfgStr, tc.gzip)
+			s := createScannerWithConfig(t, logger, paths, tc.cfgStr)
 			requireEqualFiles(t, tc.expDesc, s.GetFiles())
 		})
 	}
@@ -946,7 +954,7 @@ scanner:
 
 		// the glob for the very small files
 		paths := []string{filepath.Join(dir, undersizedGlob)}
-		s := createScannerWithConfig(t, logger, paths, cfgStr, false)
+		s := createScannerWithConfig(t, logger, paths, cfgStr)
 		files := s.GetFiles()
 		require.Empty(t, files)
 
@@ -996,10 +1004,8 @@ scanner:
 			paths,
 			cfg,
 			false,
-			false,
 			mustPathIdentifier(false),
-			mustSourceIdentifier("foo-id"),
-		)
+			mustSourceIdentifier("foo-id"))
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "fingerprint size 1 bytes cannot be smaller than 64 bytes")
 	})
@@ -1039,7 +1045,7 @@ func BenchmarkGetFiles(b *testing.B) {
 			Enabled: false,
 		},
 	}
-	s, err := newFileScanner(logp.NewNopLogger(), paths, cfg, false)
+	s, err := newFileScanner(logp.NewNopLogger(), paths, cfg)
 	require.NoError(b, err)
 
 	for i := 0; i < b.N; i++ {
@@ -1067,7 +1073,7 @@ func BenchmarkGetFilesWithFingerprint(b *testing.B) {
 		},
 	}
 
-	s, err := newFileScanner(logp.NewNopLogger(), paths, cfg, false)
+	s, err := newFileScanner(logp.NewNopLogger(), paths, cfg)
 	require.NoError(b, err)
 
 	for i := 0; i < b.N; i++ {
@@ -1093,16 +1099,14 @@ func createWatcherWithConfig(t *testing.T, logger *logp.Logger, paths []string, 
 		paths,
 		tmpCfg.Scaner,
 		false,
-		false,
 		mustPathIdentifier(false),
-		mustSourceIdentifier("foo-id"),
-	)
+		mustSourceIdentifier("foo-id"))
 	require.NoError(t, err)
 
 	return fw
 }
 
-func createScannerWithConfig(t *testing.T, logger *logp.Logger, paths []string, cfgStr string, gzipAllowed bool) loginp.FSScanner {
+func createScannerWithConfig(t *testing.T, logger *logp.Logger, paths []string, cfgStr string) loginp.FSScanner {
 	cfg, err := conf.NewConfigWithYAML([]byte(cfgStr), cfgStr)
 	require.NoError(t, err)
 
@@ -1113,7 +1117,7 @@ func createScannerWithConfig(t *testing.T, logger *logp.Logger, paths []string, 
 	config := defaultFileWatcherConfig()
 	err = ns.Config().Unpack(&config)
 	require.NoError(t, err)
-	scanner, err := newFileScanner(logger, paths, config.Scanner, gzipAllowed)
+	scanner, err := newFileScanner(logger, paths, config.Scanner)
 	require.NoError(t, err)
 
 	return scanner
@@ -1170,7 +1174,7 @@ func BenchmarkToFileDescriptor(b *testing.B) {
 		},
 	}
 
-	s, err := newFileScanner(logp.NewNopLogger(), paths, cfg, false)
+	s, err := newFileScanner(logp.NewNopLogger(), paths, cfg)
 	require.NoError(b, err)
 
 	it, err := s.getIngestTarget(filename)

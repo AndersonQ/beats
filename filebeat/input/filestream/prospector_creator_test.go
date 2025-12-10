@@ -79,7 +79,6 @@ prospector.scanner.fingerprint.enabled: true
 				cfgStr: `
 paths: ['some']
 file_identity.path: ~
-gzip_disabled: true
 prospector.scanner.fingerprint.enabled: true
 `,
 			},

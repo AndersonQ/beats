@@ -11,13 +11,13 @@
 kind: feature
 
 # Change summary; a 80ish characters long description of the change.
-summary: "Update GZIP support to GA and enable it by default on filestream"
+summary: "GZIP support is GA and always enabled on filestream"
 
 # Long description; in case the summary is not enough to describe the change
 # this field accommodate a description without length limits.
 # NOTE: This field will be rendered only for breaking-change and known-issue kinds at the moment.
 description: |
-    Ingesting GZIP-compressed files is now GA and enabled by default on filestream, deprecating `gzip_experimental` and introducing `gzip_disabled`. Refer to the [documentation](https://www.elastic.co/docs/reference/beats/filebeat/filebeat-input-filestream#reading-gzip-files) for more details.
+    Ingesting GZIP-compressed files is now GA and always enabled on filestream. The `gzip_experimental` configuration option has been removed. If using a file identity other than `fingerprint`, use `exclude_files` to exclude GZIP files. Refer to the [documentation](https://www.elastic.co/docs/reference/beats/filebeat/filebeat-input-filestream#reading-gzip-files) for more details.
 
 component: filebeat
 

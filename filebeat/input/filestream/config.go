@@ -43,14 +43,6 @@ type config struct {
 	FileWatcher  fileWatcherConfig `config:"prospector.scanner"`
 	FileIdentity *conf.Namespace   `config:"file_identity"`
 
-	// GZIPDisabled disables decompressing GZIP at ingestion time.
-	GZIPDisabled bool `config:"gzip_disabled"`
-
-	// GZIPExperimental is deprecated and ignored. It is kept to log a warning
-	// if it's set. Use GZIPDisabled to configure GZIP behaviour.
-	// Deprecated.
-	GZIPExperimental *bool `config:"gzip_experimental"`
-
 	// -1 means that registry will never be cleaned, disabling clean_inactive.
 	// Setting it to 0 also disables clean_inactive
 	// "clean_inactive" is parsed, again, and used by internal/input-logfile/manager.go
@@ -209,14 +201,6 @@ func (c *config) Validate() error {
 		}
 	}
 
-	if !c.GZIPDisabled {
-		// file_identity must be fingerprint when gzip support is enabled.
-		if c.FileIdentity != nil && c.FileIdentity.Name() != fingerprintName {
-			return fmt.Errorf(
-				"to use a file identity other than 'fingerprint', disable gzip, set 'gzip_disabled: true'")
-		}
-	}
-
 	if c.ID == "" && c.TakeOver.Enabled {
 		return errors.New("'take_over' mode is only allowed if an input ID is set")
 	}
@@ -232,10 +216,12 @@ func (c config) checkUnsupportedParams(logger *logp.Logger) {
 				"duplication and incomplete input metrics, it's use is " +
 				"highly discouraged.")
 	}
-	if c.GZIPExperimental != nil {
+
+	if c.FileIdentity != nil && c.FileIdentity.Name() != fingerprintName {
 		logger.Named("filestream").Warn(
-			"'gzip_experimental' has been removed. GZIP support is now " +
-				"enabled by default. To disable it, use 'gzip_disabled: true'")
+			"using a file identity other than 'fingerprint' may cause GZIP " +
+				"files to be incorrectly tracked and re-ingested. Consider " +
+				"using 'exclude_files' to exclude GZIP files from ingestion.")
 	}
 }
 

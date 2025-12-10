@@ -63,7 +63,6 @@ filebeat.inputs:
       hello: world
       number: 2
     file_identity.native: ~
-    gzip_disabled: true
     prospector.scanner.fingerprint.enabled: false	  
 output.console:
   enabled: true
@@ -108,7 +107,6 @@ filebeat.inputs:
       hello: world
       number: 2
     file_identity.native: ~
-    gzip_disabled: true
     prospector.scanner.fingerprint.enabled: false	  
 output.console:
   enabled: true
@@ -144,7 +142,6 @@ filebeat.inputs:
     paths:
      - %s
     file_identity.native: ~
-    gzip_disabled: true
     prospector.scanner.fingerprint.enabled: false
 name: testShipperName
 output.console:

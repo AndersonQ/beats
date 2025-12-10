@@ -46,7 +46,6 @@ filebeat.inputs:
       - %s
 
     file_identity.native: ~
-    gzip_disabled: true
     prospector.scanner.fingerprint.enabled: false
     clean_inactive: 3.1s
     ignore_older: 2s
@@ -321,11 +320,9 @@ logging:
 `
 	nativeCfg := `
     file_identity.native: ~
-    gzip_disabled: true
 `
 	pathCfg := `
     file_identity.path: ~
-    gzip_disabled: true
 `
 	fingerprintCfg := `
     file_identity.fingerprint: ~
@@ -467,7 +464,6 @@ logging:
 `
 	nativeCfg := `
     file_identity.native: ~
-    gzip_disabled: true
     prospector:
       scanner:
         fingerprint.enabled: false

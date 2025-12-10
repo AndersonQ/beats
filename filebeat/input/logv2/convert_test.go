@@ -69,7 +69,6 @@ paths:
 		  "file_identity": {
 		    "native": null
 		  },
-		  "gzip_disabled": true,
 		  "id": "foo",
 		  "paths": [
 		    "/tmp/foo"
@@ -101,7 +100,6 @@ file_identity.path: ~
 		  "file_identity": {
 		    "path": null
 		  },
-		  "gzip_disabled": true,
 		  "id": "foo",
 		  "paths": [
 		    "/tmp/foo"
@@ -133,7 +131,6 @@ file_identity.fingerprint: ~
   "file_identity": {
     "fingerprint": null
   },
-  "gzip_disabled": true,
   "id": "foo",
   "paths": [
     "/tmp/foo"
@@ -159,7 +156,6 @@ parsers:
 		  "file_identity": {
 		    "native": null
 		  },
-		  "gzip_disabled": true,
 		  "id": "foo",
           "parsers": [
             {
@@ -198,7 +194,6 @@ parsers:
 		  "file_identity": {
 		    "native": null
 		  },
-		  "gzip_disabled": true,
 		  "id": "foo",
           "parsers": [
             {
@@ -243,7 +238,6 @@ parsers:
 		  "file_identity": {
 		    "native": null
 		  },
-		  "gzip_disabled": true,
 		  "id": "foo",
           "parsers": [
             {
@@ -288,7 +282,6 @@ parsers:
 		  "file_identity": {
 		    "native": null
 		  },
-		  "gzip_disabled": true,
 		  "id": "foo",
           "parsers": [
             {
@@ -344,7 +337,6 @@ multiline:
   "file_identity": {
     "native": null
   },
-  "gzip_disabled": true,
   "prospector": {
     "scanner": {
       "fingerprint": {
@@ -380,7 +372,6 @@ multiline: true
   "file_identity": {
     "native": null
   },
-  "gzip_disabled": true,
   "prospector": {
     "scanner": {
       "fingerprint": {

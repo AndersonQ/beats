@@ -190,31 +190,22 @@ func TestNewFile(t *testing.T) {
 	require.NoError(t, err)
 
 	testCases := map[string]struct {
-		gzipDisabled  bool
 		filePath      string
 		expectedType  interface{}
 		expectError   bool
 		errorContains string
 		setup         func(t *testing.T, filePath string) *os.File
 	}{
-		"gzip_disabled_returns_plain_file": {
-			gzipDisabled: true,
+		"plain_file_returns_plain_file": {
 			filePath:     plainFilePath,
 			expectedType: &plainFile{},
 		},
-		"gzip_enabled_with_plain_file_returns_plain_file": {
-			gzipDisabled: false,
-			filePath:     plainFilePath,
-			expectedType: &plainFile{},
-		},
-		"gzip_enabled_with_gzip_file_returns_gzip_reader": {
-			gzipDisabled: false,
+		"gzip_file_returns_gzip_reader": {
 			filePath:     gzippedFilePath,
 			expectedType: &gzipSeekerReader{},
 		},
-		"gzip_enabled_with_unreadable_file_returns_error": {
-			gzipDisabled: false,
-			filePath:     plainFilePath, // content doesn't matter
+		"unreadable_file_returns_error": {
+			filePath: plainFilePath, // content doesn't matter
 			setup: func(t *testing.T, filePath string) *os.File {
 				// Return a file that is already closed to trigger a read error
 				// in IsGZIP
@@ -231,7 +222,6 @@ func TestNewFile(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			inp := &filestream{
-				gzipDisabled: tc.gzipDisabled,
 				readerConfig: defaultReaderConfig(),
 			}
 
@@ -278,31 +268,27 @@ func TestOpenFile_GZIPNeverTruncated(t *testing.T) {
 	require.NoError(t, err, "could not save gzip file")
 
 	tcs := []struct {
-		name         string
-		gzipDisabled bool
-		path         string
-		want         bool
-		errMsg       string
+		name   string
+		path   string
+		want   bool
+		errMsg string
 	}{
 		{
-			name:         "plain file is truncated",
-			gzipDisabled: true,
-			path:         plainPath,
-			want:         true,
-			errMsg:       "plain file should be considered truncated",
+			name:   "plain file is truncated",
+			path:   plainPath,
+			want:   true,
+			errMsg: "plain file should be considered truncated",
 		},
 		{
-			name:         "GZIP file is never truncated",
-			gzipDisabled: false,
-			path:         gzPath,
-			want:         false,
-			errMsg:       "GZIP file skips truncated validation",
+			name:   "GZIP file is never truncated",
+			path:   gzPath,
+			want:   false,
+			errMsg: "GZIP file skips truncated validation",
 		},
 	}
 
 	for _, tc := range tcs {
 		inp := filestream{
-			gzipDisabled:    tc.gzipDisabled,
 			encodingFactory: encoding.Plain,
 			readerConfig:    readerConfig{BufferSize: 32},
 		}

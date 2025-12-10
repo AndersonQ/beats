@@ -40,7 +40,6 @@ filebeat.inputs:
     enabled: true
     prospector.scanner.check_interval: 30s
     file_identity.native: ~
-    gzip_disabled: true
     prospector.scanner.fingerprint.enabled: false
     paths:
       - %s

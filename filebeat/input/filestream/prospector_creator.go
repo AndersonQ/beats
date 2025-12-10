@@ -60,11 +60,9 @@ func newProspector(
 		logger,
 		config.Paths,
 		config.FileWatcher,
-		!config.GZIPDisabled,
 		config.Delete.Enabled,
 		identifier,
-		srci,
-	)
+		srci)
 	if err != nil {
 		return nil, fmt.Errorf("error while creating filewatcher %w", err)
 	}

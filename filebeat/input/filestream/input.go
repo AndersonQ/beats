@@ -68,7 +68,6 @@ type filestream struct {
 	parsers              parser.Config
 	takeOver             loginp.TakeOverConfig
 	scannerCheckInterval time.Duration
-	gzipDisabled         bool
 
 	// Function references for testing
 	waitGracePeriodFn func(
@@ -141,7 +140,6 @@ func configure(
 		closerConfig:      c.Close,
 		parsers:           c.Reader.Parsers,
 		takeOver:          c.TakeOver,
-		gzipDisabled:      c.GZIPDisabled,
 		deleterConfig:     c.Delete,
 		waitGracePeriodFn: waitGracePeriod,
 		tickFn:            time.Tick,
@@ -584,20 +582,12 @@ func (inp *filestream) openFile(
 // newFile wraps the given os.File into an appropriate File interface
 // implementation.
 //
-// If the 'gzip_disabled' config is true, it returns a plain file reader
-// (plainFile).
-//
-// If the 'gzip_disabled' flag is false (the default), it attempts to detect if
-// the underlying file is GZIP compressed. If it is, it returns a GZIP-aware
-// file reader (gzipSeekerReader). If the file is not GZIP compressed, it
-// returns a plain file reader (plainFile).
+// It attempts to detect if the underlying file is GZIP compressed. If it is,
+// it returns a GZIP-aware file reader (gzipSeekerReader). If the file is not
+// GZIP compressed, it returns a plain file reader (plainFile).
 //
 // It returns an error if any happens.
 func (inp *filestream) newFile(rawFile *os.File) (File, error) {
-	if inp.gzipDisabled {
-		return newPlainFile(rawFile), nil
-	}
-
 	isGZIP, err := IsGZIP(rawFile)
 	if err != nil {
 		return nil, fmt.Errorf(
