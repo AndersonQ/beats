@@ -73,16 +73,17 @@ func init() {
 // The FS events then trigger either new Harvester runs or updates
 // the statestore.
 type fileProspector struct {
-	logger                *logp.Logger
-	filewatcher           loginp.FSWatcher
-	identifier            fileIdentifier
-	ignoreOlder           time.Duration
-	ignoreInactiveSince   ignoreInactiveType
-	cleanRemoved          bool
-	stateChangeCloser     stateChangeCloserConfig
-	takeOver              loginp.TakeOverConfig
-	filestreamIdentifiers map[string]fileIdentifier
-	logIdentifiers        map[string]file.StateIdentifier
+	logger                   *logp.Logger
+	filewatcher              loginp.FSWatcher
+	identifier               fileIdentifier
+	ignoreOlder              time.Duration
+	ignoreInactiveSince      ignoreInactiveType
+	cleanRemoved             bool
+	stateChangeCloser        stateChangeCloserConfig
+	takeOver                 loginp.TakeOverConfig
+	filestreamIdentifiers    map[string]fileIdentifier
+	logIdentifiers           map[string]file.StateIdentifier
+	maxEncodedFingerprintLen int
 }
 
 func (p *fileProspector) previousID(name string, fd loginp.FileDescriptor, v loginp.TakeOverState) string {
@@ -356,7 +357,10 @@ func (p *fileProspector) onFSEvent(
 	log = log.With("source_file", event.SrcID)
 
 	// For growing_fingerprint, handle prefix matching and migration
-	if p.identifier.Name() == growingFingerprintName {
+	if p.identifier.Name() == growingFingerprintName &&
+		// the stored fingerprint might still be smaller that max len, thus,
+		// it needs to update the growingFingerprint when it's len is the max.
+		len(event.Descriptor.Fingerprint) <= p.maxEncodedFingerprintLen {
 		src = p.handleGrowingFingerprintLookup(log, event, src, updater)
 	}
 
@@ -529,6 +533,12 @@ func (p *fileProspector) handleGrowingFingerprintLookup(
 		return src
 	}
 
+	// Fast path: if the current fingerprint key already exists, no migration
+	// needed.
+	if updater.KeyExists(src) {
+		return src
+	}
+
 	// Try to find a prefix match (file may have grown)
 	oldKey, found := p.findGrowingFingerprintMatch(updater, event.Descriptor.Fingerprint, event.NewPath)
 	if !found {
@@ -565,16 +575,30 @@ func (p *fileProspector) findGrowingFingerprintMatch(
 	// Use the IterateOnPrefix method to find potential matches
 	updater.IterateOnPrefix(func(key string, meta interface{}) bool {
 		// Only process growing_fingerprint keys
-		steps := strings.Split(key, identitySep)
-		if len(steps) > 4 {
-			return true // continue iteration
+		// key format: filestream::INPUT_ID::growing_fingerprint::FINGERPRINT
+		// Find '::' separator positions manually to avoid strings.Split allocation.
+		var seps [4]int
+		nSeps := 0
+		for i := 0; i < len(key)-1; i++ {
+			if key[i] == ':' && key[i+1] == ':' {
+				seps[nSeps] = i
+				nSeps++
+				if nSeps == 4 {
+					break
+				}
+				i++
+			}
 		}
-		if steps[2] != growingFingerprintName {
+		if nSeps != 3 {
 			return true // continue iteration
 		}
 
-		// Extract the fingerprint from the key
-		storedFingerprint := steps[3]
+		identityName := key[seps[1]+2 : seps[2]]
+		if identityName != growingFingerprintName {
+			return true // continue iteration
+		}
+
+		storedFingerprint := key[seps[2]+2:]
 		if storedFingerprint == "" {
 			return true // continue iteration - empty fingerprint
 		}
@@ -604,13 +628,11 @@ func (p *fileProspector) findGrowingFingerprintMatch(
 			return true // continue iteration - different file
 		}
 
-		// Found a match - keep track of the largest (most specific) match
-		if len(storedFingerprint) > bestMatchLen {
-			bestMatchKey = key
-			bestMatchLen = len(storedFingerprint)
-		}
-
-		return true // continue iteration
+		// There is at most one registry entry per path (migration replaces
+		// the old key), so the first path-matching prefix is the answer.
+		bestMatchKey = key
+		bestMatchLen = len(storedFingerprint)
+		return false // stop iteration
 	})
 
 	if bestMatchKey != "" {
@@ -648,6 +670,8 @@ func (p *fileProspector) migrateGrowingFingerprint(
 		return fmt.Errorf("failed to migrate growing fingerprint from %s to %s: %w", oldKey, newKey, err)
 	}
 
+	// TODO(AndersonQ): this log is too expensive, printing the fingerprint can
+	// be almost 4k. Remove it and find a better integration test for it
 	p.logger.Infof("migrated growing fingerprint entry: %s -> %s", oldKey, newKey)
 	return nil
 }
