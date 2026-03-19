@@ -18,9 +18,6 @@
 package filestream
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
-
 	loginp "github.com/elastic/beats/v7/filebeat/input/filestream/internal/input-logfile"
 	"github.com/elastic/elastic-agent-libs/logp"
 )
