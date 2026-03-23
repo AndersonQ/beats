@@ -18,32 +18,12 @@
 package filestream
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
-
 	loginp "github.com/elastic/beats/v7/filebeat/input/filestream/internal/input-logfile"
 	"github.com/elastic/elastic-agent-libs/logp"
 )
 
-func loggerWithEvent(logger *logp.Logger, event loginp.FSEvent, src loginp.Source) *logp.Logger {
-	log := logger.With(
-		"operation", event.Op.String(),
-		"source_name", src.Name(),
-	)
-	if event.Descriptor.Fingerprint != "" {
-		fp := event.Descriptor.Fingerprint
-		isGrowingFP := false
-		if fs, ok := src.(fileSource); ok {
-			isGrowingFP = fs.identifierGenerator == growingFingerprintName
-		}
-		if isGrowingFP {
-			hash := sha256.Sum256([]byte(fp))
-			hashedFP := hex.EncodeToString(hash[:])
-			log.Debugf("growing fingerprint %s hashed to %s", fp, hashedFP)
-			fp = hashedFP
-		}
-		log = log.With("fingerprint", fp)
-	}
+func loggerWithEvent(logger *logp.Logger, event loginp.FSEvent) *logp.Logger {
+	log := logger.With("operation", event.Op.String())
 	if event.Descriptor.Info != nil {
 		osID := event.Descriptor.Info.GetOSState().Identifier()
 		if osID != "" {
