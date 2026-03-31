@@ -357,10 +357,7 @@ func (p *fileProspector) onFSEvent(
 	log = log.With("source_file", event.SrcID)
 
 	// For growing_fingerprint, handle prefix matching and migration
-	if p.identifier.Name() == growingFingerprintName &&
-		// the stored fingerprint might still be smaller that max len, thus,
-		// it needs to update the growingFingerprint when it's len is the max.
-		len(event.Descriptor.Fingerprint) <= p.maxEncodedFingerprintLen {
+	if p.identifier.Name() == growingFingerprintName {
 		src = p.handleGrowingFingerprintLookup(log, event, src, updater)
 	}
 
@@ -533,12 +530,6 @@ func (p *fileProspector) handleGrowingFingerprintLookup(
 		return src
 	}
 
-	// Fast path: if the current fingerprint key already exists, no migration
-	// needed.
-	if updater.KeyExists(src) {
-		return src
-	}
-
 	// Try to find a prefix match (file may have grown)
 	oldKey, found := p.findGrowingFingerprintMatch(updater, event.Descriptor.Fingerprint, event.NewPath)
 	if !found {
@@ -574,31 +565,18 @@ func (p *fileProspector) findGrowingFingerprintMatch(
 
 	// Use the IterateOnPrefix method to find potential matches
 	updater.IterateOnPrefix(func(key string, meta interface{}) bool {
-		// Only process growing_fingerprint keys
-		// key format: filestream::INPUT_ID::growing_fingerprint::FINGERPRINT
-		// Find '::' separator positions manually to avoid strings.Split allocation.
-		var seps [4]int
-		nSeps := 0
-		for i := 0; i < len(key)-1; i++ {
-			if key[i] == ':' && key[i+1] == ':' {
-				seps[nSeps] = i
-				nSeps++
-				if nSeps == 4 {
-					break
-				}
-				i++
-			}
-		}
-		if nSeps != 3 {
+		steps := strings.Split(key, identitySep)
+		if len(steps) != 4 {
+			// not what we're looking for
 			return true // continue iteration
 		}
 
-		identityName := key[seps[1]+2 : seps[2]]
-		if identityName != growingFingerprintName {
+		if steps[2] != growingFingerprintName {
 			return true // continue iteration
 		}
 
-		storedFingerprint := key[seps[2]+2:]
+		// Extract the fingerprint from the key
+		storedFingerprint := steps[3]
 		if storedFingerprint == "" {
 			return true // continue iteration - empty fingerprint
 		}
