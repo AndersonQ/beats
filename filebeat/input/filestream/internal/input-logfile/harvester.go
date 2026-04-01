@@ -218,7 +218,6 @@ func startHarvester(
 	}
 
 	return func(canceler context.Context) (err error) {
-		ctx.Logger.Infof("harvester for file %s, srcID %s. %T", src.Name(), srcID, src)
 		defer func() {
 			if v := recover(); v != nil {
 				err := fmt.Errorf("harvester panic with: %+v\n%s", v, debug.Stack())

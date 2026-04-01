@@ -769,7 +769,7 @@ func (s *fileScanner) toFileDescriptor(it *ingestTarget) (fd loginp.FileDescript
 func (s *fileScanner) computeGrowingFingerprint(it *ingestTarget, fd loginp.FileDescriptor) (loginp.FileDescriptor, error) {
 	// Empty files have no fingerprint yet - empty string fingerprint
 	if it.info.Size() == 0 {
-		s.log.Info("fileScanner: computeGrowingFingerprint: size 0, nothing to compute", fd.Filename)
+		// s.log.Info("fileScanner: computeGrowingFingerprint: size 0, nothing to compute", fd.Filename)
 		return fd, nil
 	}
 
@@ -804,8 +804,8 @@ func (s *fileScanner) computeGrowingFingerprint(it *ingestTarget, fd loginp.File
 	if err != nil && !errors.Is(err, io.EOF) && !errors.Is(err, io.ErrUnexpectedEOF) {
 		return fd, fmt.Errorf("failed to read %q for growing fingerprint: %w", it.originalFilename, err)
 	}
-	s.log.Infof("fileScanner: computeGrowingFingerprint: for file %s: %d/%d bytes",
-		fd.Filename, n, s.cfg.Fingerprint.MaxLength)
+	// s.log.Infof("fileScanner: computeGrowingFingerprint: for file %s: %d/%d bytes",
+	// 	fd.Filename, n, s.cfg.Fingerprint.MaxLength)
 
 	fd.Fingerprint = hex.EncodeToString(s.growingBuffer[:n])
 
