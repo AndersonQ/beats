@@ -562,9 +562,9 @@ func (p *fileProspector) findGrowingFingerprintMatch(
 
 	// Use the IterateOnPrefix method to find potential matches
 	updater.IterateOnPrefix(func(key string, meta interface{}) bool {
-		// Only process growing_fingerprint keys
 		steps := strings.Split(key, identitySep)
-		if len(steps) > 4 {
+		if len(steps) != 4 {
+			// not what we're looking for
 			return true // continue iteration
 		}
 		if steps[2] != growingFingerprintName {
@@ -646,7 +646,7 @@ func (p *fileProspector) migrateGrowingFingerprint(
 		return fmt.Errorf("failed to migrate growing fingerprint from %s to %s: %w", oldKey, newKey, err)
 	}
 
-	p.logger.Infof("migrated growing fingerprint entry: %s -> %s", oldKey, newKey)
+	p.logger.Debugf("migrated growing fingerprint entry (key len %d -> %d)", len(oldKey), len(newKey))
 	return nil
 }
 
