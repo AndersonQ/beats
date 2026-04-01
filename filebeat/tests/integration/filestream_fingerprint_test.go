@@ -88,6 +88,7 @@ func TestFilestreamFingerprintSmallFiles(t *testing.T) {
 	)
 
 	tempDir := filebeat.TempDir()
+	printOutputOnFailure(t, tempDir)
 	logDir := filepath.Join(tempDir, "logs")
 	if err := os.MkdirAll(logDir, 0755); err != nil {
 		t.Fatalf("failed to create log directory: %s", err)
@@ -236,6 +237,7 @@ func TestFilestreamGrowingFingerprint(t *testing.T) {
 	)
 
 	tempDir := filebeat.TempDir()
+	printOutputOnFailure(t, tempDir)
 	logDir := filepath.Join(tempDir, "logs")
 	if err := os.MkdirAll(logDir, 0755); err != nil {
 		t.Fatalf("failed to create log directory: %s", err)
@@ -348,6 +350,7 @@ func TestFilestreamGrowingFingerprint_update_while_stopped(t *testing.T) {
 	)
 
 	tempDir := filebeat.TempDir()
+	printOutputOnFailure(t, tempDir)
 	logDir := filepath.Join(tempDir, "logs")
 	if err := os.MkdirAll(logDir, 0755); err != nil {
 		t.Fatalf("failed to create log directory: %s", err)
@@ -438,6 +441,8 @@ func TestFilestreamGrowingFingerprint_do_not_mix_up_files(t *testing.T) {
 	)
 
 	tempDir := filebeat.TempDir()
+	printOutputOnFailure(t, tempDir)
+
 	logDir := filepath.Join(tempDir, "logs")
 	if err := os.MkdirAll(logDir, 0755); err != nil {
 		t.Fatalf("failed to create log directory: %s", err)
@@ -518,6 +523,7 @@ func TestFilestreamGrowingFingerprint_do_not_mix_up_files_with_shutdown_and_dele
 	)
 
 	tempDir := filebeat.TempDir()
+	printOutputOnFailure(t, tempDir)
 	logDir := filepath.Join(tempDir, "logs")
 	if err := os.MkdirAll(logDir, 0755); err != nil {
 		t.Fatalf("failed to create log directory: %s", err)
@@ -580,6 +586,7 @@ func TestFilestreamGrowingFingerprintTruncation(t *testing.T) {
 	)
 
 	tempDir := filebeat.TempDir()
+	printOutputOnFailure(t, tempDir)
 	logDir := filepath.Join(tempDir, "logs")
 	if err := os.MkdirAll(logDir, 0755); err != nil {
 		t.Fatalf("failed to create log directory: %s", err)
@@ -699,30 +706,21 @@ func TestPrintOutputFileSorted(t *testing.T) {
 	printOutputFileSorted(t, tempDir)
 }
 
-// printOutputFileSorted reads the output file, parses each line as JSON,
-// and prints the events sorted by file path, then by timestamp
-func printOutputFileSorted(t *testing.T, tempDir string) {
+// readOutputEvents reads all output files and returns parsed events sorted
+// by file path, then by timestamp.
+func readOutputEvents(t *testing.T, tempDir string) []outputEvent {
 	t.Helper()
 
-	// Find the output file
 	pattern := filepath.Join(tempDir, "output-*.ndjson")
 	files, err := filepath.Glob(pattern)
-	if err != nil {
-		t.Fatalf("failed to glob output files: %s", err)
-	}
-	if len(files) == 0 {
-		t.Log("No output files found")
-		return
-	}
+	require.NoError(t, err, "failed to glob output files")
 
 	var events []outputEvent
-
 	for _, outputFile := range files {
 		f, err := os.Open(outputFile)
 		if err != nil {
 			t.Fatalf("failed to open output file %s: %s", outputFile, err)
 		}
-		defer f.Close()
 
 		scanner := bufio.NewScanner(f)
 		for scanner.Scan() {
@@ -740,20 +738,59 @@ func printOutputFileSorted(t *testing.T, tempDir string) {
 			events = append(events, event)
 		}
 
-		if err := scanner.Err(); err != nil {
-			t.Fatalf("error reading output file: %s", err)
-		}
+		f.Close()
+
+		require.NoError(t, scanner.Err(), "output file scanner returned an error")
 	}
 
-	// Sort by file path, then by timestamp
 	sort.Slice(events, func(i, j int) bool {
 		if events[i].Log.File.Path != events[j].Log.File.Path {
 			return events[i].Log.File.Path < events[j].Log.File.Path
 		}
-		return events[i].Timestamp < events[j].Timestamp
+		return events[i].Log.Offset < events[j].Log.Offset
 	})
 
-	// Print sorted events
+	return events
+}
+
+// messagesForFile returns the messages from events attributed to the given
+// file path, preserving the order from the (already sorted) events slice.
+func messagesForFile(events []outputEvent, path string) []string {
+	var msgs []string
+	for _, e := range events {
+		if e.Log.File.Path == path {
+			msgs = append(msgs, e.Message)
+		}
+	}
+	return msgs
+}
+
+// readFileLines reads a text file from disk and returns its non-empty lines.
+func readFileLines(t *testing.T, path string) []string {
+	t.Helper()
+	data, err := os.ReadFile(path)
+	require.NoError(t, err, "failed to read %s", path)
+
+	var lines []string
+	for _, line := range strings.Split(string(data), "\n") {
+		if line != "" {
+			lines = append(lines, line)
+		}
+	}
+	return lines
+}
+
+// printOutputFileSorted reads the output file, parses each line as JSON,
+// and prints the events sorted by file path, then by timestamp.
+func printOutputFileSorted(t *testing.T, tempDir string) {
+	t.Helper()
+
+	events := readOutputEvents(t, tempDir)
+	if len(events) == 0 {
+		t.Log("No output events found")
+		return
+	}
+
 	t.Log("=== Output events sorted by file path, then by timestamp ===")
 	for _, event := range events {
 		fmt.Printf("[%s] %s @ offset %6d: %s\n",
@@ -763,4 +800,17 @@ func printOutputFileSorted(t *testing.T, tempDir string) {
 			event.Message)
 	}
 	t.Logf("=== Total: %d events ===", len(events))
+}
+
+// printOutputOnFailure registers a cleanup function that prints the sorted
+// output events only if the test has failed. This aids debugging without
+// cluttering passing test output.
+func printOutputOnFailure(t *testing.T, tempDir string) {
+	t.Helper()
+	t.Cleanup(func() {
+		if !t.Failed() {
+			return
+		}
+		printOutputFileSorted(t, tempDir)
+	})
 }
