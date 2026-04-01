@@ -613,7 +613,7 @@ func (p *fileProspector) buildShortFPSet(updater loginp.StateMetadataUpdater) {
 	updater.IterateOnPrefix(func(key string, meta interface{}) bool {
 		// Only process growing_fingerprint keys
 		steps := strings.Split(key, identitySep)
-		if len(steps) > 4 {
+		if len(steps) != 4 {
 			return true // continue iteration
 		}
 		if steps[2] != growingFingerprintName {
