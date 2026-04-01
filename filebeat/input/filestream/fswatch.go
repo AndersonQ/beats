@@ -287,7 +287,20 @@ func (w *fileWatcher) watch(ctx unison.Canceler) {
 	}
 
 	// remaining files in the prev map are the ones that are missing
-	// either because they have been deleted or renamed
+	// either because they have been deleted or renamed.
+	//
+	// TODO(AndersonQ): For growing_fingerprint, rename detection can fail.
+	// FileID() returns the fingerprint, so if a file is renamed AND grows
+	// between two scans, the old and new FileID won't match. The rename
+	// is then misclassified as delete + create. With cleanRemoved enabled
+	// (the default), the old registry entry is removed before the new
+	// file's prefix match can find and migrate it, causing the renamed
+	// file to be re-read from offset 0.
+	// This does not affect static fingerprint where the fingerprint never
+	// changes and rename detection works correctly.
+	// Possible fixes: use the OS file identifier (device+inode) for rename
+	// detection when growing_fingerprint is in use, or defer the entry
+	// removal so the prefix match has a chance to migrate it first.
 	for remainingPath, remainingDesc := range w.prev {
 		var e loginp.FSEvent
 
@@ -791,7 +804,6 @@ func (s *fileScanner) computeGrowingFingerprint(it *ingestTarget, fd loginp.File
 	if err != nil && !errors.Is(err, io.EOF) && !errors.Is(err, io.ErrUnexpectedEOF) {
 		return fd, fmt.Errorf("failed to read %q for growing fingerprint: %w", it.originalFilename, err)
 	}
-	// To expensive for 100k file, used for debug only
 	// s.log.Infof("fileScanner: computeGrowingFingerprint: for file %s: %d/%d bytes",
 	// 	fd.Filename, n, s.cfg.Fingerprint.MaxLength)
 

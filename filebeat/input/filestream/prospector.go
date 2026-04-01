@@ -648,9 +648,7 @@ func (p *fileProspector) migrateGrowingFingerprint(
 		return fmt.Errorf("failed to migrate growing fingerprint from %s to %s: %w", oldKey, newKey, err)
 	}
 
-	// TODO(AndersonQ): this log is too expensive, printing the fingerprint can
-	// be almost 4k. Remove it and find a better integration test for it
-	p.logger.Infof("migrated growing fingerprint entry: %s -> %s", oldKey, newKey)
+	p.logger.Debugf("migrated growing fingerprint entry (key len %d -> %d)", len(oldKey), len(newKey))
 	return nil
 }
 
