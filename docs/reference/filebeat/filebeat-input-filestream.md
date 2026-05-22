@@ -317,9 +317,26 @@ Duplicated IDs will lead to data duplication and some input instances will not p
 
 ### `paths` [filestream-input-paths]
 
-A list of glob-based paths that will be crawled and fetched. All patterns supported by [Go Glob](https://golang.org/pkg/path/filepath/#Glob) are also supported here. For example, to fetch all files from a predefined level of subdirectories, the following pattern can be used: `/var/log/*/*.log`. This fetches all `.log` files from the subfolders of `/var/log`. It does not fetch log files from the `/var/log` folder itself. It is possible to recursively fetch all files in all subdirectories of a directory using the optional [`recursive_glob`](#filestream-recursive-glob) settings.
+A list of pattern-based paths, using Go's [`filepath.Match`](https://pkg.go.dev/path/filepath#Match) pattern, that will be crawled and fetched. Filebeat starts a harvester for each file matched by the patterns. Specify one path per line; each line begins with a dash (`-`).
 
-Filebeat starts a harvester for each file that it finds under the specified paths. You can specify one path per line. Each line begins with a dash (-).
+::::{important}
+**These patterns are not shell globs.** A common mistake is to use `**` the way Bash or other shells do — for example `/var/log/**.log` or `/var/**/svc/**/*.log`. These do **not** match files in subdirectories.
+
+To match files across an arbitrary number of subdirectories, use [`recursive_glob`](#filestream-recursive-glob), enabled by default.
+It provides the `**` recursive wildcard which has stricter rules than the shell equivalent: it must be its own path segment (`/var/log/**/*.log`, not `/var/log/**.log`), at most one `**` is allowed per path, and matching is limited to 8 directory levels.
+::::
+
+```yaml
+paths:
+  - /var/log/*.log
+  - /var/log/*/*.log
+```
+
+Patterns are matched using Go's [`filepath.Match`](https://pkg.go.dev/path/filepath#Match), see its [documentation](https://pkg.go.dev/path/filepath#Match) for more details. The wildcards `*`, `?` match within a single path segment only — they do not cross `/`.
+For example:
+ - `/var/log/*.log` matches `.log` files directly under `/var/log/`
+ - `/var/log/*/*.log` matches `.log` files exactly one directory level below.
+
 
 ### `take_over` [filebeat-input-filestream-take-over]
 
@@ -979,9 +996,27 @@ The scanner watches the configured paths. It scans the file system periodically 
 
 #### `prospector.scanner.recursive_glob` [filestream-recursive-glob]
 
-Enable expanding `**` into recursive glob patterns. With this feature enabled, the rightmost `**` in each path is expanded into a fixed number of glob patterns. For example: `/foo/**` expands to `/foo`, `/foo/*`, `/foo/*/*`, and so on. If enabled it expands a single `**` into a 8-level deep `*` pattern.
+Controls expansion of the `**` wildcard in [`paths`](#filestream-input-paths). Enabled by default.
 
-This feature is enabled by default. Set `prospector.scanner.recursive_glob` to false to disable it.
+When enabled, a `**` segment is expanded into a sequence of glob patterns covering zero through 8 directory levels. For example, `/foo/**` is expanded to:
+
+```
+/foo
+/foo/*
+/foo/*/*
+/foo/*/*/*
+... up to 8 levels
+```
+
+And `/var/log/**/*.log` is expanded to `/var/log/*.log`, `/var/log/*/*.log`, ..., `/var/log/*/*/*/*/*/*/*/*/*.log`.
+
+**Constraints:**
+
+- `**` must be its own path segment. `foo**`, `**foo`, and `**.log` are not expanded.
+- Each pattern may contain at most one `**`. Patterns with more than one fail at startup with `multiple ** in "..."`.
+- Matching is limited to 8 directory levels; files in directories deeper than that are not matched.
+
+Set `prospector.scanner.recursive_glob: false` to disable expansion. With expansion disabled, `**` is passed through unchanged to `filepath.Match`, which does not support recursive matching.
 
 #### `prospector.scanner.exclude_files` [filebeat-input-filestream-exclude-files]
 
