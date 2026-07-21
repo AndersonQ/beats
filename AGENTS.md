@@ -130,9 +130,16 @@ OSS code (Apache 2.0) **cannot** import from `x-pack/` or `elastic-agent-client`
 ## Code References
 
 When referencing code, always use exact locations and names:
-- Format: `filepath:line_number` or `filepath:start-end`
+- Path: ALWAYS repo-root-relative. Never a bare basename or a
+  package-relative path — the same basename recurs across many packages,
+  so anything shorter is ambiguous.
+    - Right: `filebeat/input/filestream/session.go:301`
+    - Wrong: `session.go:301` · `internal/input-logfile/harvester_runner.go:48`
+- Format: `<repo-relative-path>:line` or `<repo-relative-path>:start-end`
 - Use specific element names (functions, methods, variables)
 - Quote exact text from code and logs — zero paraphrasing
+- Self-check before emitting a reference: could a reader with no files open
+  resolve it to exactly one location? If not, qualify further.
 
 ## Changelog
 
